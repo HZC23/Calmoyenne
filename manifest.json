@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Calculateur de Moyenne - École Directe",
+  "version": "1.0",
+  "description": "Ajoute automatiquement la moyenne générale sur École Directe.",
+  "permissions": [
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.ecoledirecte.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.ecoledirecte.com/*"],
+      "js": ["script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icons/icon.svg"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

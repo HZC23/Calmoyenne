@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Fond de l'icône -->
+  <rect width="128" height="128" rx="20" ry="20" fill="#0056b3" />
+  
+  <!-- Dessin d'une feuille de papier avec des notes -->
+  <rect x="30" y="24" width="68" height="80" rx="4" ry="4" fill="white" />
+  
+  <!-- Lignes représentant du texte -->
+  <rect x="40" y="40" width="48" height="4" rx="2" ry="2" fill="#cccccc" />
+  <rect x="40" y="50" width="38" height="4" rx="2" ry="2" fill="#cccccc" />
+  <rect x="40" y="60" width="42" height="4" rx="2" ry="2" fill="#cccccc" />
+  
+  <!-- Moyenne -->
+  <text x="64" y="84" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#0056b3">M</text>
+  
+  <!-- Cercle autour de la moyenne -->
+  <circle cx="64" cy="76" r="18" fill="none" stroke="#0056b3" stroke-width="3" />
+</svg> 
