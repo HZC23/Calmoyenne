@@ -5,15 +5,22 @@
     <meta charset="utf-8">
     <style>
         body {
-            width: 280px;
+            width: 360px;
             padding: 15px;
             font-family: Arial, sans-serif;
+            color: #333;
         }
         h1 {
-            font-size: 16px;
+            font-size: 18px;
             color: #0056b3;
             margin-top: 0;
             text-align: center;
+        }
+        h2 {
+            font-size: 15px;
+            color: #0056b3;
+            margin-top: 15px;
+            margin-bottom: 10px;
         }
         p {
             font-size: 14px;
@@ -31,17 +38,441 @@
             font-size: 12px;
             color: #666;
             text-align: center;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: center;
+            transition: background-color 0.2s;
+        }
+        .btn:hover {
+            background-color: #003d82;
+        }
+        .btn-block {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn-green {
+            background-color: #52c41a;
+        }
+        .btn-green:hover {
+            background-color: #389e0d;
+        }
+        .btn-red {
+            background-color: #f5222d;
+        }
+        .btn-red:hover {
+            background-color: #cf1322;
+        }
+        .btn-small {
+            padding: 3px 8px;
+            font-size: 12px;
+        }
+        .btn-icon {
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            line-height: 24px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .tab-container {
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+        .tab-header {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab-btn {
+            padding: 8px 15px;
+            cursor: pointer;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            transition: background-color 0.2s;
+            position: relative;
+            z-index: 2;
+            user-select: none;
+            pointer-events: auto;
+            outline: none;
+        }
+        .tab-btn:hover {
+            background-color: #e9e9e9;
+        }
+        .tab-btn.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+            font-weight: bold;
+            z-index: 3;
+        }
+        .tab-content {
+            display: none;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-top: none;
+            background-color: white;
+            position: relative;
+            z-index: 1;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .coeff-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .coeff-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .coeff-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .coeff-matiere {
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+            padding-right: 8px;
+            font-weight: 500;
+        }
+        .coeff-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .coeff-input {
+            width: 60px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            text-align: center;
+        }
+        .empty-message {
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            padding: 20px 10px;
+        }
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .form-row input[type="text"] {
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .action-buttons button {
+            flex: 1;
+        }
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 6px 30px 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .search-box .search-icon {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            background-color: #722ed1;
+            margin-left: 5px;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #555 transparent transparent transparent;
+        }
+        .alert {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid;
+        }
+        .alert-success {
+            background-color: #f6ffed;
+            border-color: #52c41a;
+        }
+        .alert-info {
+            background-color: #e6f7ff;
+            border-color: #1890ff;
+        }
+        .alert-warning {
+            background-color: #fffbe6;
+            border-color: #faad14;
+        }
+        .hidden {
+            display: none;
+        }
+        /* Animation pour le message de notification */
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            z-index: 9999;
+            animation: fadeInOut 3s forwards;
+        }
+        .exportImport {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .exportImport button {
+            flex: 1;
+            font-size: 12px;
+        }
+        .coeff-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            background-color: white;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .coeff-table th {
+            background-color: #f0f2f5;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            color: #1f2937;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .coeff-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+        }
+        .coeff-table tr:last-child td {
+            border-bottom: none;
+        }
+        .coeff-table tr:hover {
+            background-color: #f9fafb;
+        }
+        .coeff-table .matiere-col {
+            width: 60%;
+        }
+        .coeff-table .coeff-col {
+            width: 25%;
+        }
+        .coeff-table .actions-col {
+            width: 15%;
+            text-align: right;
+        }
+        .coeff-table input[type="number"] {
+            width: 70px;
+            padding: 5px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .coeff-table-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .empty-table-message {
+            padding: 20px;
+            text-align: center;
+            color: #6b7280;
+            font-style: italic;
+            background-color: #f9fafb;
         }
     </style>
-    <script src="browser-polyfill.js"></script>
 </head>
 <body>
     <img src="icons/icon48.png" alt="Logo" class="logo">
     <h1>Calculateur de Moyenne - École Directe</h1>
     <p>Cette extension calcule automatiquement votre moyenne générale et l'affiche en haut du tableau des notes sur École Directe.</p>
-    <p>Rendez-vous simplement sur votre espace École Directe et consultez vos notes. Votre moyenne générale apparaîtra en haut du tableau.</p>
-    <div class="footer">
-        v1.0 - Développé avec ❤️
+    
+    <div class="tab-container">
+        <div class="tab-header">
+            <button type="button" class="tab-btn active" data-tab="info">Informations</button>
+            <button type="button" class="tab-btn" data-tab="coeffs">Coefficients</button>
+            <button type="button" class="tab-btn" data-tab="settings">Paramètres</button>
+        </div>
+        
+        <div class="tab-content active" id="info-tab">
+            <p>Rendez-vous simplement sur votre espace École Directe et consultez vos notes. Votre moyenne générale apparaîtra en haut du tableau.</p>
+            <p>Vous pouvez personnaliser les coefficients des matières en cliquant sur la moyenne générale dans le tableau, ou en utilisant l'onglet "Coefficients" ci-contre.</p>
+            
+            <div class="alert alert-info">
+                <strong>Astuce :</strong> Cliquez sur la moyenne générale dans le tableau pour accéder aux détails du calcul et personnaliser les coefficients directement.
+            </div>
+        </div>
+        
+        <div class="tab-content" id="coeffs-tab">
+            <h2>Coefficients personnalisés <span class="badge" id="coeff-count">0</span></h2>
+            
+            <div class="search-box">
+                <input type="text" id="search-coeff" placeholder="Rechercher une matière...">
+                <span class="search-icon">🔍</span>
+            </div>
+            
+            <div class="coeff-table-container">
+                <table class="coeff-table" id="coeff-table">
+                    <thead>
+                        <tr>
+                            <th class="matiere-col">Matière</th>
+                            <th class="coeff-col">Coefficient</th>
+                            <th class="actions-col"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="coeff-list">
+                        <tr>
+                            <td colspan="3" class="empty-table-message">Aucun coefficient personnalisé</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <h2>Ajouter un coefficient</h2>
+            <div class="form-row">
+                <input type="text" id="new-matiere" placeholder="Nom de la matière">
+                <input type="number" id="new-coeff" placeholder="Coeff" min="0" max="20" step="0.5" class="coeff-input">
+                <button class="btn btn-green" data-action="add-coeff">Ajouter</button>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-green" data-action="save-coeffs">Enregistrer</button>
+                <button class="btn btn-red" data-action="reset-coeffs">Tout réinitialiser</button>
+            </div>
+            
+            <div class="exportImport">
+                <button class="btn" data-action="export-coeffs">Exporter</button>
+                <button class="btn" data-action="import-coeffs">Importer</button>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="settings-tab">
+            <h2>Paramètres de l'extension</h2>
+            
+            <h3>Classe par défaut</h3>
+            <div class="form-row">
+                <select id="default-classe" class="coeff-input" style="width: auto;">
+                    <option value="">Auto-détection</option>
+                    <option value="6">6ème</option>
+                    <option value="5">5ème</option>
+                    <option value="4">4ème</option>
+                    <option value="3">3ème</option>
+                    <option value="2">2nde (A)</option>
+                    <option value="2C">2nde C</option>
+                    <option value="1">1ère (A)</option>
+                    <option value="1C">1ère C</option>
+                    <option value="1D">1ère D</option>
+                    <option value="T">Terminale (A)</option>
+                    <option value="TC">Terminale C</option>
+                    <option value="TD">Terminale D</option>
+                </select>
+                <button class="btn" data-action="save-classe">Appliquer</button>
+            </div>
+            
+            <h3>À propos</h3>
+            <p>Version: 1.2</p>
+            <p>Développé avec ❤️ pour les élèves utilisant École Directe.</p>
+        </div>
     </div>
+    
+    <div class="footer">
+        © 2023 - Calculateur de Moyenne - v1.2
+    </div>
+    
+    <!-- Template pour l'import -->
+    <input type="file" id="import-file" accept=".json" style="display: none;">
+    
+    <!-- Chargement des scripts -->
+    <script src="browser-polyfill.js"></script>
+    <script src="popup.js" defer></script>
 </body>
-</html> 
+</html>

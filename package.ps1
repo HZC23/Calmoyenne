@@ -12,7 +12,7 @@ New-Item -ItemType Directory -Path "$outputDir\chrome" -Force
 New-Item -ItemType Directory -Path "$outputDir\firefox" -Force
 
 # Liste d'exclusion explicite
-$excludeDirs = @("dist", "node_modules", ".git")
+$excludeDirs = @("dist", "node_modules", ".git", "keys")
 
 # Copie des fichiers (sans la copie récursive qui cause le problème)
 $files = Get-ChildItem -Path "." -File | Where-Object { 

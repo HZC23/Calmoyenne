@@ -62,6 +62,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             'EPS': 1,
             'ED.PHYSIQUE & SPORT.': 1,
             'EDHC': 1,
+            'Enseignement Moral et Civique': 1,
+            'EMC': 1,
+            'ENS. MORAL & CIVIQUE': 1,
             'TECHNOLOGIE': 1
         },
         '5': { // 5ème
@@ -96,6 +99,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             'EPS': 1,
             'ED.PHYSIQUE & SPORT.': 1,
             'EDHC': 1,
+            'Enseignement Moral et Civique': 1,
+            'EMC': 1,
+            'ENS. MORAL & CIVIQUE': 1,
             'TECHNOLOGIE': 1
         },
         '4': { // 4ème
@@ -130,6 +136,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             'EPS': 1,
             'ED.PHYSIQUE & SPORT.': 1,
             'EDHC': 1,
+            'Enseignement Moral et Civique': 1,
+            'EMC': 1,
+            'ENS. MORAL & CIVIQUE': 1,
             'TECHNOLOGIE': 1
         },
         '3': { // 3ème
@@ -164,6 +173,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             'EPS': 1,
             'ED.PHYSIQUE & SPORT.': 1,
             'EDHC': 1,
+            'Enseignement Moral et Civique': 1,
+            'EMC': 1,
+            'ENS. MORAL & CIVIQUE': 1,
             'TECHNOLOGIE': 1
         },
         '2': { // 2nde (2-A)
@@ -232,6 +244,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             'EPS': 1,
             'ED.PHYSIQUE & SPORT.': 1,
             'EDHC': 1,
+            'Enseignement Moral et Civique': 1,
+            'EMC': 1,
+            'ENS. MORAL & CIVIQUE': 1,
             'TECHNOLOGIE': 1
         },
         '1': { // 1ère A
@@ -265,6 +280,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             'EPS': 1,
             'ED.PHYSIQUE & SPORT.': 1,
             'EDHC': 1,
+            'Enseignement Moral et Civique': 1,
+            'EMC': 1,
+            'ENS. MORAL & CIVIQUE': 1,
             'TECHNOLOGIE': 1
         },
         '1C': { // 1ère C
@@ -298,6 +316,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             'EPS': 1,
             'ED.PHYSIQUE & SPORT.': 1,
             'EDHC': 1,
+            'Enseignement Moral et Civique': 1,
+            'EMC': 1,
+            'ENS. MORAL & CIVIQUE': 1,
             'TECHNOLOGIE': 1
         },
         '1D': { // 1ère D
@@ -331,6 +352,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             'EPS': 1,
             'ED.PHYSIQUE & SPORT.': 1,
             'EDHC': 1,
+            'Enseignement Moral et Civique': 1,
+            'EMC': 1,
+            'ENS. MORAL & CIVIQUE': 1,
             'TECHNOLOGIE': 1
         },
         'T': { // Terminale A
@@ -362,6 +386,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             'EPS': 1,
             'ED.PHYSIQUE & SPORT.': 1,
             'EDHC': 1,
+            'Enseignement Moral et Civique': 1,
+            'EMC': 1,
+            'ENS. MORAL & CIVIQUE': 1,
             'TECHNOLOGIE': 1
         },
         'TC': { // Terminale C
@@ -393,6 +420,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             'EPS': 1,
             'ED.PHYSIQUE & SPORT.': 1,
             'EDHC': 1,
+            'Enseignement Moral et Civique': 1,
+            'EMC': 1,
+            'ENS. MORAL & CIVIQUE': 1,
             'TECHNOLOGIE': 1
         },
         'TD': { // Terminale D
@@ -424,6 +454,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             'EPS': 1,
             'ED.PHYSIQUE & SPORT.': 1,
             'EDHC': 1,
+            'Enseignement Moral et Civique': 1,
+            'EMC': 1,
+            'ENS. MORAL & CIVIQUE': 1,
             'TECHNOLOGIE': 1
         }
     };
@@ -995,11 +1028,11 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                 // Essayer d'abord d'obtenir le coefficient selon la classe et la matière
                 let coeffClasse = null;
                 if (classeEleve && matiereNom) {
-                    coeffClasse = suggererCoefficient(matiereNom, classeEleve);
-                    if (coeffClasse !== null) {
-                        coeff = coeffClasse;
-                        coeffSource = `classe ${classeEleve}`;
-                        console.log(`Coefficient ${coeff} appliqué pour ${matiereNom} en classe de ${classeEleve}`);
+                    const resultatCoeff = suggererCoefficient(matiereNom, classeEleve);
+                    if (resultatCoeff !== null) {
+                        coeff = resultatCoeff.valeur;
+                        coeffSource = resultatCoeff.source;
+                        console.log(`Coefficient ${coeff} appliqué pour ${matiereNom} (source: ${coeffSource})`);
                     }
                 }
                 
@@ -1473,12 +1506,32 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                     
                     // Cellule coefficient
                     const cellCoeff = detailRow.insertCell();
-                    cellCoeff.textContent = matiere.coefficient.toString().replace(".", ",");
+                    
+                    // Modification: Rendre le coefficient modifiable avec un contrôle de nombre
+                    const coeffInput = document.createElement("input");
+                    coeffInput.type = "number";
+                    coeffInput.min = "0";
+                    coeffInput.max = "20";
+                    coeffInput.step = "0.5";
+                    coeffInput.value = matiere.coefficient;
+                    coeffInput.style.width = "60px";
+                    coeffInput.style.padding = "5px";
+                    coeffInput.style.borderRadius = "4px";
+                    coeffInput.style.border = "1px solid #ccc";
+                    coeffInput.dataset.matiere = matiere.nom;
+                    coeffInput.addEventListener("change", function() {
+                        // Limiter à des nombres entre 0 et 20
+                        if (this.value < 0) this.value = 0;
+                        if (this.value > 20) this.value = 20;
+                    });
+                    
+                    cellCoeff.appendChild(coeffInput);
+                    
                     cellCoeff.style.padding = "8px";
                     cellCoeff.style.borderBottom = "1px solid #ddd";
                     if (matiere.coeffSource.includes("classe")) {
-                        cellCoeff.style.backgroundColor = "#e6fffa";
-                        cellCoeff.style.fontWeight = "bold";
+                        coeffInput.style.backgroundColor = "#e6fffa";
+                        coeffInput.style.fontWeight = "bold";
                     }
                     
                     // Cellule source du coefficient
@@ -1486,6 +1539,10 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                     if (matiere.coeffSource.includes("classe")) {
                         cellSource.textContent = "Adapté à la classe";
                         cellSource.style.color = "#13c2c2";
+                    } else if (matiere.coeffSource.includes("personnalisé")) {
+                        cellSource.textContent = "Personnalisé";
+                        cellSource.style.color = "#722ed1";
+                        cellSource.style.fontWeight = "bold";
                     } else if (matiere.coeffSource === "tableau") {
                         cellSource.textContent = "Détecté dans le tableau";
                     } else {
@@ -1573,6 +1630,104 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                 });
                 
                 detailContainer.appendChild(closeBtn);
+                
+                // Ajouter un bouton pour appliquer les modifications des coefficients
+                const btnAppliquerCoeffs = document.createElement("button");
+                btnAppliquerCoeffs.textContent = "Appliquer les nouveaux coefficients";
+                btnAppliquerCoeffs.style.marginTop = "15px";
+                btnAppliquerCoeffs.style.marginRight = "10px";
+                btnAppliquerCoeffs.style.padding = "8px 16px";
+                btnAppliquerCoeffs.style.backgroundColor = "#52c41a";
+                btnAppliquerCoeffs.style.color = "white";
+                btnAppliquerCoeffs.style.border = "none";
+                btnAppliquerCoeffs.style.borderRadius = "4px";
+                btnAppliquerCoeffs.style.cursor = "pointer";
+                
+                btnAppliquerCoeffs.addEventListener("click", () => {
+                    // Collecter tous les coefficients modifiés
+                    const coefficientsModifies = {};
+                    const inputs = detailTable.querySelectorAll('input[type="number"]');
+                    inputs.forEach(input => {
+                        const matiere = input.dataset.matiere;
+                        const coefficient = parseFloat(input.value);
+                        if (!isNaN(coefficient) && matiere) {
+                            coefficientsModifies[matiere] = coefficient;
+                        }
+                    });
+                    
+                    // Sauvegarder les coefficients personnalisés
+                    try {
+                        localStorage.setItem('calmoyenne_coefficients_personnalises', JSON.stringify(coefficientsModifies));
+                        console.log("Coefficients personnalisés enregistrés :", coefficientsModifies);
+                    } catch (e) {
+                        console.error("Erreur lors de l'enregistrement des coefficients personnalisés:", e);
+                    }
+                    
+                    // Fermer la popup et relancer l'analyse
+                    detailContainer.style.display = "none";
+                    
+                    // Forcer une réanalyse
+                    dernierTableauHash = "";
+                    contenuPrecedent = "";
+                    analyseTerminee = false;
+                    
+                    // Afficher un message de confirmation
+                    afficherMessageFlottant("Coefficients personnalisés appliqués");
+                    
+                    setTimeout(() => {
+                        if (typeof window.lancerAnalyse === 'function') {
+                            window.lancerAnalyse();
+                        }
+                    }, 100);
+                });
+                
+                // Ajouter un bouton pour réinitialiser les coefficients personnalisés
+                const btnReinitialiserCoeffs = document.createElement("button");
+                btnReinitialiserCoeffs.textContent = "Réinitialiser les coefficients";
+                btnReinitialiserCoeffs.style.marginTop = "15px";
+                btnReinitialiserCoeffs.style.marginRight = "10px";
+                btnReinitialiserCoeffs.style.padding = "8px 16px";
+                btnReinitialiserCoeffs.style.backgroundColor = "#f5222d";
+                btnReinitialiserCoeffs.style.color = "white";
+                btnReinitialiserCoeffs.style.border = "none";
+                btnReinitialiserCoeffs.style.borderRadius = "4px";
+                btnReinitialiserCoeffs.style.cursor = "pointer";
+                
+                btnReinitialiserCoeffs.addEventListener("click", () => {
+                    // Demande de confirmation
+                    if (confirm("Êtes-vous sûr de vouloir réinitialiser tous les coefficients personnalisés ?")) {
+                        // Supprimer les coefficients personnalisés
+                        try {
+                            localStorage.removeItem('calmoyenne_coefficients_personnalises');
+                            console.log("Coefficients personnalisés réinitialisés");
+                        } catch (e) {
+                            console.error("Erreur lors de la réinitialisation des coefficients personnalisés:", e);
+                        }
+                        
+                        // Fermer la popup et relancer l'analyse
+                        detailContainer.style.display = "none";
+                        
+                        // Forcer une réanalyse
+                        dernierTableauHash = "";
+                        contenuPrecedent = "";
+                        analyseTerminee = false;
+                        
+                        // Afficher un message de confirmation
+                        afficherMessageFlottant("Coefficients réinitialisés aux valeurs par défaut");
+                        
+                        setTimeout(() => {
+                            if (typeof window.lancerAnalyse === 'function') {
+                                window.lancerAnalyse();
+                            }
+                        }, 100);
+                    }
+                });
+                
+                // Ajouter les boutons avant le bouton de fermeture
+                detailContainer.insertBefore(btnAppliquerCoeffs, closeBtn);
+                detailContainer.insertBefore(btnReinitialiserCoeffs, closeBtn);
+                detailContainer.insertBefore(document.createElement("br"), closeBtn);
+                
                 document.body.appendChild(detailContainer);
                 
                 // Événement pour afficher le détail
@@ -1753,24 +1908,13 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
         return "";
     }
     
-    // Fonction pour suggérer des coefficients adaptés à la matière et à la classe
-    function suggererCoefficient(matiere, classe) {
-        // Si pas de classe détectée, retourner coefficient par défaut
-        if (!classe || !coefficientsParClasse[classe]) {
-            return null;
-        }
+    // Fonction pour normaliser le nom d'une matière
+    function normaliserNomMatiere(matiere) {
+        if (!matiere) return "";
         
-        // Nettoyer le nom de la matière pour la recherche
         const matiereLower = matiere.toLowerCase().trim();
         
-        // Recherche directe dans le dictionnaire des coefficients
-        for (const [nomMatiere, coeff] of Object.entries(coefficientsParClasse[classe])) {
-            if (matiereLower === nomMatiere.toLowerCase()) {
-                return coeff;
-            }
-        }
-        
-        // Recherche partielle avec les mots-clés
+        // Dictionnaire des normalisations de matières
         const matchingKeywords = {
             'français': 'Français',
             'francais': 'Français',
@@ -1794,6 +1938,11 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             'art': 'Arts Plastiques',
             'plastique': 'Arts Plastiques',
             'musique': 'Musique',
+            'enseignement moral et civique': 'Enseignement Moral et Civique',
+            'moral': 'Enseignement Moral et Civique',
+            'civique': 'Enseignement Moral et Civique',
+            'emc': 'Enseignement Moral et Civique',
+            'musical': 'Musique',
             'eps': 'EPS',
             'sport': 'EPS',
             'philo': 'Philosophie',
@@ -1810,16 +1959,90 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             'llce': 'LLCE Anglais'
         };
         
-        for (const [keyword, nomMatiere] of Object.entries(matchingKeywords)) {
-            if (matiereLower.includes(keyword)) {
-                // Vérifier si cette matière a un coefficient dans la classe actuelle
-                if (coefficientsParClasse[classe][nomMatiere]) {
-                    return coefficientsParClasse[classe][nomMatiere];
-                }
+        // Vérifier d'abord si la matière correspond exactement à une des entrées
+        for (const [keyword, nomNormalise] of Object.entries(matchingKeywords)) {
+            if (matiereLower === keyword || matiereLower === nomNormalise.toLowerCase()) {
+                return nomNormalise;
             }
         }
         
-        // Si aucune correspondance, retourner null
+        // Ensuite, vérifier si la matière contient un des mots-clés
+        for (const [keyword, nomNormalise] of Object.entries(matchingKeywords)) {
+            if (matiereLower.includes(keyword)) {
+                return nomNormalise;
+            }
+        }
+        
+        // Si aucune correspondance, retourner la matière telle quelle
+        return matiere;
+    }
+
+    // Fonction pour suggérer des coefficients adaptés à la matière et à la classe
+    function suggererCoefficient(matiere, classe) {
+        // Vérifier d'abord s'il y a des coefficients personnalisés
+        try {
+            console.log(`Recherche de coefficient personnalisé pour ${matiere}`);
+            const coefficientsPersonnalises = JSON.parse(localStorage.getItem('calmoyenne_coefficients_personnalises') || '{}');
+            console.log('Coefficients personnalisés trouvés:', coefficientsPersonnalises);
+            
+            // Recherche exacte
+            if (coefficientsPersonnalises[matiere]) {
+                console.log(`Coefficient personnalisé trouvé pour ${matiere}: ${coefficientsPersonnalises[matiere]}`);
+                return {
+                    valeur: coefficientsPersonnalises[matiere],
+                    source: "personnalisé"
+                };
+            }
+            
+            // Recherche insensible à la casse
+            const matiereNormalisee = matiere.toLowerCase().trim();
+            for (const [key, value] of Object.entries(coefficientsPersonnalises)) {
+                if (key.toLowerCase().trim() === matiereNormalisee) {
+                    console.log(`Coefficient personnalisé trouvé (insensible à la casse) pour ${matiere}: ${value}`);
+                    return {
+                        valeur: value,
+                        source: "personnalisé"
+                    };
+                }
+            }
+            
+            // Recherche partielle
+            for (const [key, value] of Object.entries(coefficientsPersonnalises)) {
+                if (key.toLowerCase().includes(matiereNormalisee) || 
+                    matiereNormalisee.includes(key.toLowerCase())) {
+                    console.log(`Coefficient personnalisé trouvé (correspondance partielle) pour ${matiere}: ${value}`);
+                    return {
+                        valeur: value,
+                        source: "personnalisé"
+                    };
+                }
+            }
+        } catch(e) {
+            console.error("Erreur lors de la récupération des coefficients personnalisés:", e);
+        }
+        
+        // Si pas de coefficient personnalisé, continuer avec la logique existante
+        if (!classe || !coefficientsParClasse[classe]) {
+            return null;
+        }
+
+        // Normaliser le nom de la matière pour la recherche
+        const matiereNormalisee = normaliserNomMatiere(matiere);
+        
+        // Vérifier si un coefficient est spécifié dans la table pour cette matière et classe
+        const coefficients = coefficientsParClasse[classe];
+        for (const [cle, valeur] of Object.entries(coefficients)) {
+            if (cle.toLowerCase() === matiereNormalisee.toLowerCase() ||
+                matiereNormalisee.toLowerCase().includes(cle.toLowerCase()) ||
+                cle.toLowerCase().includes(matiereNormalisee.toLowerCase())) {
+                console.log(`Coefficient ${valeur} trouvé pour ${matiere} (${cle}) en classe de ${classe}`);
+                return {
+                    valeur: valeur,
+                    source: "classe " + classe
+                };
+            }
+        }
+        
         return null;
     }
 
@@ -1982,6 +2205,18 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             console.error("Erreur lors de l'ajout du bouton de classe:", err);
         }
     }
+    
+    // Ajouter l'écouteur de messages pour le recalcul
+    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+        if (request.action === "recalculerMoyennes") {
+            console.log("Recalcul des moyennes demandé");
+            // Forcer une réanalyse
+            dernierTableauHash = "";
+            contenuPrecedent = "";
+            analyseTerminee = false;
+            setTimeout(lancerAnalyse, 100);
+        }
+    });
     
     // Exposer la fonction lancerAnalyse dans la portée globale window
     window.lancerAnalyse = lancerAnalyse;

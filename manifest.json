@@ -22,7 +22,8 @@
     ],
     "web_accessible_resources": [
         "script.js",
-        "browser-polyfill.js"
+        "browser-polyfill.js",
+        "popup.js"
     ],
     "browser_action": {
         "default_popup": "popup.html",
@@ -33,6 +34,7 @@
         "48": "icons/icon48.png",
         "128": "icons/icon128.png"
     },
+    "content_security_policy": "script-src 'self'; object-src 'self'",
     "browser_specific_settings": {
         "gecko": {
             "id": "calculateur-moyenne@github.com",
