@@ -379,7 +379,6 @@
     <div class="tab-container">
         <div class="tab-header">
             <button type="button" class="tab-btn active" data-tab="info">Informations</button>
-            <button type="button" class="tab-btn" data-tab="coeffs">Coefficients</button>
             <button type="button" class="tab-btn" data-tab="settings">Paramètres</button>
         </div>
         
@@ -389,49 +388,6 @@
             
             <div class="alert alert-info">
                 <strong>Astuce :</strong> Cliquez sur la moyenne générale dans le tableau pour accéder aux détails du calcul et personnaliser les coefficients directement.
-            </div>
-        </div>
-        
-        <div class="tab-content" id="coeffs-tab">
-            <h2>Coefficients personnalisés <span class="badge" id="coeff-count">0</span></h2>
-            
-            <div class="search-box">
-                <input type="text" id="search-coeff" placeholder="Rechercher une matière...">
-                <span class="search-icon">🔍</span>
-            </div>
-            
-            <div class="coeff-table-container">
-                <table class="coeff-table" id="coeff-table">
-                    <thead>
-                        <tr>
-                            <th class="matiere-col">Matière</th>
-                            <th class="coeff-col">Coefficient</th>
-                            <th class="actions-col"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="coeff-list">
-                        <tr>
-                            <td colspan="3" class="empty-table-message">Aucun coefficient personnalisé</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            
-            <h2>Ajouter un coefficient</h2>
-            <div class="form-row">
-                <input type="text" id="new-matiere" placeholder="Nom de la matière">
-                <input type="number" id="new-coeff" placeholder="Coeff" min="0" max="20" step="0.5" class="coeff-input">
-                <button class="btn btn-green" data-action="add-coeff">Ajouter</button>
-            </div>
-            
-            <div class="action-buttons">
-                <button class="btn btn-green" data-action="save-coeffs">Enregistrer</button>
-                <button class="btn btn-red" data-action="reset-coeffs">Tout réinitialiser</button>
-            </div>
-            
-            <div class="exportImport">
-                <button class="btn" data-action="export-coeffs">Exporter</button>
-                <button class="btn" data-action="import-coeffs">Importer</button>
             </div>
         </div>
         

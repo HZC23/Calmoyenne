@@ -594,48 +594,8 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             
             console.log("Observateurs DOM configurés avec succès");
             
-            // Écouter TOUS les clics sur la page pour Firefox
-            document.addEventListener('click', function(e) {
-                if (isFirefox) {
-                    // Plus de délais pour Firefox: étaler sur 1,5 secondes
-                    const delaisFirefox = [100, 300, 500, 800, 1200, 1500];
-                    delaisFirefox.forEach(delai => {
-                        setTimeout(() => verifierChangementTableau(), delai);
-                    });
-                } else {
-                    // Chrome: juste deux vérifications
-                    setTimeout(() => verifierChangementTableau(), 500);
-                    setTimeout(() => verifierChangementTableau(), 1000);
-                }
-            }, true); // Mode capture pour intercepter tous les clics
-            
-            // Capture des événements qui pourraient signifier un changement de période
-            const captureEvenements = (e) => {
-                console.log("Événement potentiel de changement détecté:", e.type);
-                // Vérifier plusieurs fois pour être sûr
-                setTimeout(() => verifierChangementTableau(), 300);
-                setTimeout(() => verifierChangementTableau(), 700);
-                setTimeout(() => verifierChangementTableau(), 1200);
-            };
-            
-            // Liste des événements à surveiller
-            const evenementsImportants = ['change', 'input', 'click', 'mouseup'];
-            
-            // Ajouter une détection agressive pour Firefox
+            // Configuration spécifique pour Firefox
             if (isFirefox) {
-                evenementsImportants.forEach(event => {
-                    document.addEventListener(event, captureEvenements, true);
-                });
-                
-                // Remplacer DOMNodeInserted par un MutationObserver
-                const observateurNodesAjoutes = new MutationObserver((mutations) => {
-                    mutations.forEach(mutation => {
-                        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                            setTimeout(() => verifierChangementTableau(), 500);
-                        }
-                    });
-                });
-                
                 // Observer les modifications du DOM avec le nouveau MutationObserver
                 observateurNodesAjoutes.observe(document.body, {
                     childList: true,
@@ -666,12 +626,12 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                                     for (let i = 1; i <= 5; i++) {
                                         setTimeout(() => verifierChangementTableau(), i * 350);
                                     }
-                                }, true);
+                                });
                             });
                         });
                     }
                 } catch (err) {
-                    console.error("Erreur lors de l'ajout d'écouteurs sur sélecteurs:", err);
+                    console.error("Erreur lors de la surveillance des sélecteurs de période:", err);
                 }
             }, 1500);
             
@@ -778,7 +738,7 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                 console.log(`Détection d'une répétition de coefficients (${occurences} fois)`);
                 
                 // Vérifier s'il y a du texte avant le premier "Coef"
-                const partiesTexte = texte.split(/Coef\s+\d+/i);
+                const partiesTexte = texte.split(/Coef\s+\d+(\.\d+)?/i);
                 const debutTexte = partiesTexte[0].trim();
                 
                 // Extraire le premier coefficient complet
@@ -796,22 +756,50 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             }
         }
         
-        // Motif pour détecter les coefficients répétés (ex: "Coef 6 Coef 6 Coef 6...")
-        const patternCoeff = /(Coef\s+\d+(\.\d+)?)\s+(\1\s+)+/gi;
+        // Préserve la casse originale pour la sortie mais utilise une version
+        // en minuscules pour la détection
+        let texteOriginal = texte;
+        let texteMinuscule = texte.toLowerCase();
+        let texteNettoye = texteOriginal;
         
-        // Remplacer les répétitions par une seule occurrence
-        let texteNettoye = texte.replace(patternCoeff, "$1 ");
+        // Recherche tous les coefficients dans le texte
+        const listeCoeffs = Array.from(texteMinuscule.matchAll(/coef\s+(\d+(\.\d+)?)/gi));
         
-        // Cas particulier: texte qui contient uniquement des répétitions de coefficients
-        if (texteNettoye.trim().startsWith("Coef ") && (texteNettoye.match(/Coef\s+\d+(\.\d+)?/gi)?.length > 1)) {
-            // Extraire le premier coefficient
-            const premierCoeff = texteNettoye.match(/Coef\s+\d+(\.\d+)?/i);
-            if (premierCoeff) {
-                return premierCoeff[0];
+        // S'il y a plus d'un coefficient et qu'ils sont tous identiques
+        if (listeCoeffs.length > 1) {
+            const valeurs = listeCoeffs.map(match => match[1]);
+            const toutesIdentiques = valeurs.every(val => val === valeurs[0]);
+            
+            if (toutesIdentiques) {
+                // Extraire le texte avant le premier coefficient
+                const indexPremierCoeff = texteMinuscule.indexOf("coef");
+                const debutTexte = indexPremierCoeff > 0 ? texteOriginal.substring(0, indexPremierCoeff).trim() : "";
+                
+                // Reconstruire avec un seul coefficient (préserver la casse du mot "Coef" original)
+                const coefOriginal = texteOriginal.substring(indexPremierCoeff, indexPremierCoeff + 4);
+                
+                if (debutTexte) {
+                    texteNettoye = `${debutTexte} (${coefOriginal} ${valeurs[0]})`;
+                } else {
+                    texteNettoye = `${coefOriginal} ${valeurs[0]}`;
+                }
             }
         }
         
-        return texteNettoye;
+        // Cas particulier: texte qui contient uniquement des répétitions de coefficients
+        if (texteMinuscule.trim().startsWith("coef ") && listeCoeffs.length > 1) {
+            // Extraire le premier coefficient et préserver la casse originale
+            const premierCoeffIndex = texteOriginal.search(/Coef\s+\d+(\.\d+)?/i);
+            if (premierCoeffIndex >= 0) {
+                const match = texteOriginal.substring(premierCoeffIndex).match(/Coef\s+\d+(\.\d+)?/i);
+                if (match) {
+                    texteNettoye = match[0];
+                }
+            }
+        }
+        
+        // Supprimer les espaces multiples
+        return texteNettoye.replace(/\s{2,}/g, ' ').trim();
     }
 
     // Fonction pour analyser le tableau des notes
@@ -910,44 +898,57 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
         console.log("Calcul de la moyenne pour le tableau:", tableau);
         
         try {
-            // Supprimer d'abord l'ancienne ligne de moyenne si elle existe
-            const anciennes = document.querySelectorAll('.ligne-moyenne-generale');
-            anciennes.forEach(ligne => ligne.remove());
-            
-            // Récupérer toutes les lignes du tableau
-            const lignes = tableau.querySelectorAll("tr");
-            console.log(`Nombre de lignes dans le tableau: ${lignes.length}`);
-            
-            // On ne prend pas la première ligne car c'est souvent un en-tête
+            // Variables pour le calcul
             let sommeCoeffs = 0;
             let sommeProduits = 0;
             let nbMatieresValides = 0;
-            
-            // Tableaux pour collecter les infos sur les matières détectées
             const matieresDetectees = [];
+            let classeEleve = detecterClasseEleve();
             
-            // Parcourir chaque ligne à partir de la deuxième
+            // Initialiser possiblesIndexMoyenne comme un tableau vide
+            let possiblesIndexMoyenne = [];
+            
+            // Essayer de récupérer la classe dans le stockage local si elle existe
+            try {
+                const classeStockee = localStorage.getItem('calmoyenne_classe');
+                if (classeStockee) {
+                    classeEleve = classeStockee;
+                    console.log(`Classe récupérée depuis le stockage local: ${classeEleve}`);
+                }
+            } catch (e) {
+                console.error("Erreur lors de la récupération de la classe stockée:", e);
+            }
+            
+            // Vérifier si le tableau contient des données
+            const lignes = tableau.querySelectorAll("tr");
+            
+            if (lignes.length <= 1) {
+                console.log("Tableau trop petit, pas de calcul de moyenne");
+                return;
+            }
+            
+            // Parcourir les lignes du tableau (sauf l'en-tête)
             for (let i = 1; i < lignes.length; i++) {
                 const ligne = lignes[i];
-                const cellules = ligne.querySelectorAll("td");
+                
+                // Variables pour cette ligne
+                let moyenne = null;
+                let coeff = null;
+                let coeffSource = "";
+                let matiereNom = null;
+                let indexMoyenne = -1; // Pour la colonne de moyenne
                 
                 // Vérifier si cette ligne contient des données de matière (au moins 3 cellules)
-                if (cellules.length < 3) {
-                    console.log(`Ligne ${i} ignorée: pas assez de cellules (${cellules.length})`);
+                if (ligne.querySelectorAll("td").length < 3) {
+                    console.log(`Ligne ${i} ignorée: pas assez de cellules (${ligne.querySelectorAll("td").length})`);
                     continue;
                 }
                 
                 // Chercher la cellule qui contient la moyenne
-                let moyenne = null;
-                let coeff = 1;
-                let matiereNom = "";
-                let indexMoyenne = -1;
-                let coeffSource = "défaut"; // Pour indiquer l'origine du coefficient
-                
-                // Récupérer le nom de la matière (généralement dans la première cellule)
-                if (cellules[0]) {
+                let moyenneCellule = ligne.querySelectorAll("td")[0];
+                if (moyenneCellule) {
                     // Nettoyer le texte de la matière en supprimant complètement tous les coefficients
-                    const texteOriginal = cellules[0].textContent.trim();
+                    const texteOriginal = moyenneCellule.textContent.trim();
                     
                     // Extraire seulement la partie avant tout "Coef"
                     const partieMatiere = texteOriginal.split(/Coef\s+\d+/i)[0].trim();
@@ -965,9 +966,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                     if (texteOriginal.includes("Coef")) {
                         try {
                             // Sauvegarder le contenu original dans un attribut de données
-                            cellules[0].setAttribute("data-original-content", texteOriginal);
+                            moyenneCellule.setAttribute("data-original-content", texteOriginal);
                             // Remplacer le texte visible par seulement le nom de la matière
-                            cellules[0].textContent = matiereNom;
+                            moyenneCellule.textContent = matiereNom;
                             console.log(`Nettoyage complet des coefficients pour ${matiereNom}`);
                         } catch (e) {
                             console.error("Erreur lors du nettoyage de la cellule:", e);
@@ -979,11 +980,15 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                 
                 // Recherche améliorée de la moyenne
                 // 1. Chercher dans les en-têtes du tableau s'il y a une colonne "Moyenne"
+                let possiblesIndexMoyenne = [];
+                
                 if (i === 1) { // Seulement pour la première ligne de données
                     const enTetes = tableau.querySelectorAll("th");
                     for (let j = 0; j < enTetes.length; j++) {
                         const texte = enTetes[j].textContent.trim().toLowerCase();
-                        if (texte.includes("moyenne") || texte === "moy" || texte === "moy." || texte.includes("note")) {
+                        if (texte.includes("moyenne") || texte === "moy" || texte === "moy." || 
+                            texte.includes("note") || texte.includes("résultat") || texte.includes("resultat") ||
+                            texte.includes("eval") || texte.includes("éval")) {
                             indexMoyenne = j;
                             console.log(`Colonne de moyenne identifiée à l'index ${j}`);
                             break;
@@ -992,35 +997,171 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                 }
                 
                 // 2. Si on a identifié la colonne de moyenne, l'utiliser directement
-                if (indexMoyenne !== -1 && indexMoyenne < cellules.length) {
-                    const texte = cellules[indexMoyenne].textContent.trim();
-                    if (/^\s*(\d{1,2}([,.]\d{1,2})?)\s*$/.test(texte)) {
-                        moyenne = parseFloat(texte.replace(",", "."));
-                        console.log(`Moyenne trouvée dans la colonne identifiée (${indexMoyenne}): ${moyenne}`);
+                if (indexMoyenne !== -1 && indexMoyenne < ligne.querySelectorAll("td").length) {
+                    const texte = ligne.querySelectorAll("td")[indexMoyenne].textContent.trim();
+                    // Regex améliorée pour détecter plus de formats: "15,2" "15.2" "15,2/20" "15.2/20" "15/20" "7,5/10"
+                    if (/^\s*(\d{1,2}([,.]\d{1,2})?)\s*\/?(20|10)?\s*$/.test(texte)) {
+                        const valeurNumerique = texte.replace(",", ".").match(/\d{1,2}([,.]\d{1,2})?/)[0];
+                        moyenne = parseFloat(valeurNumerique);
+                        
+                        // Convertir la note sur 10 en note sur 20 si nécessaire
+                        if (texte.includes("/10")) {
+                            moyenne = moyenne * 2;
+                            console.log(`Moyenne trouvée sur 10 et convertie en /20: ${moyenne}`);
+                        } else {
+                            console.log(`Moyenne trouvée dans la colonne identifiée (${indexMoyenne}): ${moyenne}`);
+                        }
                     }
                 }
                 
                 // 3. Si pas trouvé, chercher dans les positions typiques
                 if (moyenne === null) {
-                    const possiblesIndexMoyenne = [4, 3, 2, 1]; // Indices possibles pour la cellule de moyenne (0-based)
+                    possiblesIndexMoyenne = [4, 3, 2, 1, ligne.querySelectorAll("td").length - 1, ligne.querySelectorAll("td").length - 2]; // Plus de positions
                     
                     for (const idx of possiblesIndexMoyenne) {
-                        if (cellules[idx] && /^\s*(\d{1,2}([,.]\d{1,2})?)\s*$/.test(cellules[idx].textContent)) {
-                            moyenne = parseFloat(cellules[idx].textContent.trim().replace(",", "."));
-                            console.log(`Moyenne trouvée dans la cellule d'index ${idx}: ${moyenne}`);
-                            break;
+                        if (idx >= 0 && idx < ligne.querySelectorAll("td").length) {
+                            const texte = ligne.querySelectorAll("td")[idx].textContent.trim();
+                            // Regex améliorée pour détecter plus de formats
+                            if (/^\s*(\d{1,2}([,.]\d{1,2})?)\s*\/?(20|10)?\s*$/.test(texte)) {
+                                const valeurNumerique = texte.replace(",", ".").match(/\d{1,2}([,.]\d{1,2})?/)[0];
+                                moyenne = parseFloat(valeurNumerique);
+                                
+                                // Convertir la note sur 10 en note sur 20 si nécessaire
+                                if (texte.includes("/10")) {
+                                    moyenne = moyenne * 2;
+                                    console.log(`Moyenne trouvée sur 10 et convertie en /20: ${moyenne}`);
+                                } else {
+                                    console.log(`Moyenne trouvée dans la cellule d'index ${idx}: ${moyenne}`);
+                                }
+                                break;
+                            }
                         }
                     }
                 }
                 
-                // 4. Si toujours pas trouvé, parcourir toutes les cellules
+                // 4. Si toujours pas trouvé, parcourir toutes les cellules en cherchant un format de note
                 if (moyenne === null) {
-                    for (let j = 0; j < cellules.length; j++) {
-                        const texte = cellules[j].textContent.trim();
-                        if (/^\s*(\d{1,2}([,.]\d{1,2})?)\s*$/.test(texte)) {
-                            moyenne = parseFloat(texte.replace(",", "."));
-                            console.log(`Moyenne trouvée dans la cellule d'index ${j}: ${moyenne}`);
-                            break;
+                    for (let j = 0; j < ligne.querySelectorAll("td").length; j++) {
+                        // Ignorer les cellules déjà vérifiées dans les étapes précédentes
+                        if (possiblesIndexMoyenne.includes(j) || j === indexMoyenne) continue;
+                        
+                        const texte = ligne.querySelectorAll("td")[j].textContent.trim();
+                        
+                        // Différentes regex pour capturer différents formats de notes
+                        const regexFormats = [
+                            /^\s*(\d{1,2}([,.]\d{1,2})?)\s*\/?(20|10)?\s*$/,           // Format standard: 15,5 ou 15,5/20
+                            /^\s*(\d{1,2}([,.]\d{1,2})?)\s*\/\s*(20|10)\s*$/,          // Format avec espace: 15,5 / 20
+                            /^\s*note\s*:?\s*(\d{1,2}([,.]\d{1,2})?)\s*\/?(20|10)?\s*$/i,  // Format avec "note:" devant
+                            /^\s*moy\w*\s*:?\s*(\d{1,2}([,.]\d{1,2})?)\s*\/?(20|10)?\s*$/i // Format avec "moyenne:" devant
+                        ];
+                        
+                        let aFormatDeNote = false;
+                        let valeurNumerique = null;
+                        let estSur10 = false;
+                        
+                        // Tester chaque format
+                        for (const regex of regexFormats) {
+                            const match = texte.match(regex);
+                            if (match) {
+                                valeurNumerique = match[1].replace(",", ".");
+                                estSur10 = texte.includes("/10");
+                                aFormatDeNote = true;
+                                break;
+                            }
+                        }
+                        
+                        if (aFormatDeNote && valeurNumerique) {
+                            moyenne = parseFloat(valeurNumerique);
+                            
+                            // Convertir si note sur 10
+                            if (estSur10) {
+                                moyenne = moyenne * 2;
+                                console.log(`Moyenne trouvée sur 10 et convertie en /20: ${moyenne}`);
+                            } else {
+                                console.log(`Moyenne trouvée dans la cellule d'index ${j}: ${moyenne}`);
+                            }
+                            
+                            // Vérifier si la valeur semble être une moyenne valide (entre 0 et 20)
+                            if (moyenne >= 0 && moyenne <= 20) {
+                                break;
+                            } else {
+                                console.log(`Valeur ${moyenne} ignorée car hors plage d'une note standard`);
+                                moyenne = null; // Réinitialiser si hors plage
+                            }
+                        }
+                    }
+                }
+                
+                // 5. Chercher des indices textuels dans les cellules adjacentes
+                if (moyenne === null) {
+                    const textesIndicateurs = ["moyenne", "moy", "general", "générale", "résultat", "note", 
+                                              "eval", "éval", "bilan", "trimestre", "semestre"];
+                    
+                    for (let j = 0; j < ligne.querySelectorAll("td").length; j++) {
+                        const texte = ligne.querySelectorAll("td")[j].textContent.trim().toLowerCase();
+                        
+                        // Vérifier si le texte contient un des indicateurs
+                        const contientIndicateur = textesIndicateurs.some(indicateur => texte.includes(indicateur));
+                        
+                        if (contientIndicateur) {
+                            // Vérifier les cellules voisines (précédente, suivante, et à côté)
+                            const cellulesAVerifier = [j+1, j-1, j+2];
+                            
+                            for (const indexCellule of cellulesAVerifier) {
+                                if (indexCellule >= 0 && indexCellule < ligne.querySelectorAll("td").length) {
+                                    const valeurTexte = ligne.querySelectorAll("td")[indexCellule].textContent.trim();
+                                    // Utiliser la même regex améliorée
+                                    if (/^\s*(\d{1,2}([,.]\d{1,2})?)\s*\/?(20|10)?\s*$/.test(valeurTexte)) {
+                                        const valeurNumerique = valeurTexte.replace(",", ".").match(/\d{1,2}([,.]\d{1,2})?/)[0];
+                                        moyenne = parseFloat(valeurNumerique);
+                                        
+                                        // Convertir la note sur 10 en note sur 20 si nécessaire
+                                        if (valeurTexte.includes("/10")) {
+                                            moyenne = moyenne * 2;
+                                            console.log(`Moyenne trouvée sur 10 et convertie en /20: ${moyenne}`);
+                                        } else {
+                                            console.log(`Moyenne trouvée près d'un indicateur à l'index ${indexCellule}: ${moyenne}`);
+                                        }
+                                        
+                                        if (moyenne >= 0 && moyenne <= 20) {
+                                            break;
+                                        } else {
+                                            moyenne = null;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            if (moyenne !== null) break; // Sortir de la boucle si on a trouvé une moyenne valide
+                        }
+                    }
+                }
+                
+                // 6. Recherche avancée : parcourir toutes les cellules et analyser les textes complexes
+                if (moyenne === null) {
+                    for (let j = 0; j < ligne.querySelectorAll("td").length; j++) {
+                        const texte = ligne.querySelectorAll("td")[j].textContent.trim();
+                        
+                        // Rechercher des patterns comme "Moyenne: 12,5/20" ou "Note: 14/20"
+                        const complexMatch = texte.match(/(?:moyenne|note|résultat|bilan)\s*:?\s*(\d{1,2}([,.]\d{1,2})?)\s*\/?\s*(20|10)?/i);
+                        
+                        if (complexMatch) {
+                            const valeurNumerique = complexMatch[1].replace(",", ".");
+                            moyenne = parseFloat(valeurNumerique);
+                            
+                            // Convertir la note sur 10 en note sur 20 si nécessaire
+                            if (complexMatch[3] === "10") {
+                                moyenne = moyenne * 2;
+                                console.log(`Moyenne complexe trouvée sur 10 et convertie en /20: ${moyenne}`);
+                            } else {
+                                console.log(`Moyenne complexe trouvée dans la cellule d'index ${j}: ${moyenne}`);
+                            }
+                            
+                            if (moyenne >= 0 && moyenne <= 20) {
+                                break;
+                            } else {
+                                moyenne = null;
+                            }
                         }
                     }
                 }
@@ -1036,97 +1177,17 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                     }
                 }
                 
-                // Si aucun coefficient n'a été trouvé via la classe, utiliser la détection standard
-                if (coeffClasse === null) {
-                    // Recherche améliorée des coefficients
-                    // 1. Chercher une cellule avec "coef" ou "coefficient"
-                    let coeffTrouve = false;
-                    for (let j = 0; j < cellules.length; j++) {
-                        // Nettoyer le texte de la cellule pour éviter les répétitions
-                        const texteOriginal = cellules[j].textContent.trim();
-                        const texteNettoye = nettoyerCoefficientsRepetes(texteOriginal).toLowerCase();
-                        
-                        // Si le texte a été modifié, mettre à jour l'affichage
-                        if (texteNettoye !== texteOriginal.toLowerCase()) {
-                            try {
-                                // Sauvegarder le contenu original et remplacer le texte visible
-                                cellules[j].setAttribute("data-original-content", texteOriginal);
-                                cellules[j].textContent = texteNettoye;
-                            } catch (e) {
-                                console.error("Erreur lors du nettoyage de la cellule de coefficient:", e);
-                            }
-                        }
-                        
-                        if (texteNettoye.includes("coef") || texteNettoye.includes("coefficient")) {
-                            // Vérifier la cellule suivante pour le coefficient numérique
-                            if (j+1 < cellules.length) {
-                                const valeurTexteOriginal = cellules[j+1].textContent.trim();
-                                const valeurTexte = nettoyerCoefficientsRepetes(valeurTexteOriginal);
-                                
-                                // Mettre à jour si nécessaire
-                                if (valeurTexte !== valeurTexteOriginal) {
-                                    cellules[j+1].setAttribute("data-original-content", valeurTexteOriginal);
-                                    cellules[j+1].textContent = valeurTexte;
-                                }
-                                
-                                if (/^\s*(\d{1,2}([,.]\d{1,2})?)\s*$/.test(valeurTexte)) {
-                                    coeff = parseFloat(valeurTexte.replace(",", "."));
-                                    console.log(`Coefficient trouvé après label "coef": ${coeff}`);
-                                    coeffTrouve = true;
-                                    coeffSource = "tableau";
-                                    break;
-                                }
-                            }
-                            
-                            // Chercher dans la même cellule si format "Coef: X"
-                            const match = texteNettoye.match(/coef(?:ficient)?[^\d]*(\d+(?:[,.]\d+)?)/i);
-                            if (match) {
-                                coeff = parseFloat(match[1].replace(",", "."));
-                                console.log(`Coefficient extrait du texte "${texteNettoye}": ${coeff}`);
-                                coeffTrouve = true;
-                                coeffSource = "tableau";
-                                break;
-                            }
-                        }
-                    }
-                    
-                    // 2. Si pas trouvé, chercher dans les en-têtes du tableau
-                    if (!coeffTrouve && i === 1) { // Seulement pour la première ligne de données
-                        const enTetes = tableau.querySelectorAll("th");
-                        for (let j = 0; j < enTetes.length; j++) {
-                            const texte = enTetes[j].textContent.trim().toLowerCase();
-                            if (texte.includes("coef") || texte.includes("coefficient")) {
-                                // Regarder la cellule correspondante pour chaque ligne
-                                if (j < cellules.length) {
-                                    const valeurTexte = cellules[j].textContent.trim();
-                                    if (/^\s*(\d{1,2}([,.]\d{1,2})?)\s*$/.test(valeurTexte)) {
-                                        coeff = parseFloat(valeurTexte.replace(",", "."));
-                                        console.log(`Coefficient trouvé dans la colonne ${j}: ${coeff}`);
-                                        coeffTrouve = true;
-                                        coeffSource = "tableau";
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    // 3. Si toujours pas trouvé, méthode par défaut
-                    if (!coeffTrouve) {
-                        for (let j = 0; j < Math.min(3, cellules.length); j++) {
-                            const texte = cellules[j].textContent.trim();
-                            if (/^\s*(\d{1,2}([,.]\d{1,2})?)\s*$/.test(texte) && parseFloat(texte.replace(",", ".")) <= 10) {
-                                coeff = parseFloat(texte.replace(",", "."));
-                                console.log(`Coefficient trouvé dans la cellule d'index ${j}: ${coeff}`);
-                                coeffSource = "détecté";
-                                break;
-                            }
-                        }
-                    }
+                // Si aucun coefficient n'a été trouvé via la classe, utiliser la valeur par défaut
+                if (coeff === null) {
+                    coeff = 1; // Coefficient par défaut
+                    coeffSource = "défaut";
+                    console.log(`Aucun coefficient trouvé pour ${matiereNom}, utilisation du coefficient par défaut: ${coeff}`);
                 }
                 
-                // Si on a trouvé une moyenne valide
-                if (moyenne !== null && !isNaN(moyenne) && moyenne >= 0 && moyenne <= 20) {
+                // Suppression de la détection automatique des coefficients
+                
+                // Ajouter la ligne au résultat
+                if (moyenne !== null) {
                     sommeCoeffs += coeff;
                     sommeProduits += moyenne * coeff;
                     nbMatieresValides++;
@@ -1150,7 +1211,7 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                         // Mettre en évidence le coefficient
                         const coeffDetecte = coeffSource !== "classe";
                         if (coeffDetecte) {
-                            cellules.forEach((cellule, index) => {
+                            ligne.querySelectorAll("td").forEach((cellule, index) => {
                                 const texte = cellule.textContent.trim().replace(",", ".");
                                 
                                 // Mise en évidence du coefficient
@@ -1164,7 +1225,7 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                         }
                         
                         // Toujours mettre en évidence la moyenne
-                        cellules.forEach((cellule, index) => {
+                        ligne.querySelectorAll("td").forEach((cellule, index) => {
                             const texte = cellule.textContent.trim().replace(",", ".");
                             
                             // Mise en évidence de la moyenne
@@ -1189,7 +1250,7 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                         // Ajouter un badge sur la ligne pour indiquer la source du coefficient
                         if (coeffSource.includes("classe")) {
                             // S'assurer qu'aucun badge n'existe déjà
-                            const badgesExistants = cellules[0].querySelectorAll('.badge-coefficient');
+                            const badgesExistants = ligne.querySelectorAll('.badge-coefficient');
                             badgesExistants.forEach(badge => badge.remove());
                             
                             const badgeCoeff = document.createElement("span");
@@ -1204,7 +1265,7 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                             badgeCoeff.setAttribute("title", `Coefficient adapté à votre classe de ${classeEleve}`);
                             
                             // Ajouter le badge près du nom de la matière
-                            cellules[0].appendChild(badgeCoeff);
+                            ligne.appendChild(badgeCoeff);
                         }
                         
                         // Ajouter un effet visuel à la ligne entière
@@ -1614,120 +1675,85 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                 
                 detailContainer.appendChild(detailTable);
                 
-                // Bouton de fermeture
-                const closeBtn = document.createElement("button");
-                closeBtn.textContent = "Fermer";
-                closeBtn.style.marginTop = "15px";
-                closeBtn.style.padding = "8px 16px";
-                closeBtn.style.backgroundColor = "#0056b3";
-                closeBtn.style.color = "white";
-                closeBtn.style.border = "none";
-                closeBtn.style.borderRadius = "4px";
-                closeBtn.style.cursor = "pointer";
+                // Créer un conteneur pour les onglets
+                const tabsContainer = document.createElement("div");
+                tabsContainer.style.display = "flex";
+                tabsContainer.style.marginTop = "20px";
+                tabsContainer.style.borderBottom = "1px solid #ddd";
+                tabsContainer.style.marginBottom = "15px";
                 
-                closeBtn.addEventListener("click", () => {
-                    detailContainer.style.display = "none";
-                });
+                // Créer les onglets
+                const tabDetail = document.createElement("div");
+                tabDetail.textContent = "Détail";
+                tabDetail.dataset.tab = "detail-tab";
+                tabDetail.className = "tab-button active";
+                tabDetail.style.padding = "8px 15px";
+                tabDetail.style.cursor = "pointer";
+                tabDetail.style.backgroundColor = "#f9f9f9";
+                tabDetail.style.border = "1px solid #ddd";
+                tabDetail.style.borderBottom = "none";
+                tabDetail.style.borderTopLeftRadius = "4px";
+                tabDetail.style.borderTopRightRadius = "4px";
+                tabDetail.style.marginRight = "5px";
                 
-                detailContainer.appendChild(closeBtn);
+                const tabCoeffs = document.createElement("div");
+                tabCoeffs.textContent = "Coefficients";
+                tabCoeffs.dataset.tab = "coeffs-tab";
+                tabCoeffs.className = "tab-button";
+                tabCoeffs.style.padding = "8px 15px";
+                tabCoeffs.style.cursor = "pointer";
+                tabCoeffs.style.backgroundColor = "#f0f0f0";
+                tabCoeffs.style.border = "1px solid #ddd";
+                tabCoeffs.style.borderBottom = "none";
+                tabCoeffs.style.borderTopLeftRadius = "4px";
+                tabCoeffs.style.borderTopRightRadius = "4px";
                 
-                // Ajouter un bouton pour appliquer les modifications des coefficients
-                const btnAppliquerCoeffs = document.createElement("button");
-                btnAppliquerCoeffs.textContent = "Appliquer les nouveaux coefficients";
-                btnAppliquerCoeffs.style.marginTop = "15px";
-                btnAppliquerCoeffs.style.marginRight = "10px";
-                btnAppliquerCoeffs.style.padding = "8px 16px";
-                btnAppliquerCoeffs.style.backgroundColor = "#52c41a";
-                btnAppliquerCoeffs.style.color = "white";
-                btnAppliquerCoeffs.style.border = "none";
-                btnAppliquerCoeffs.style.borderRadius = "4px";
-                btnAppliquerCoeffs.style.cursor = "pointer";
+                tabsContainer.appendChild(tabDetail);
+                tabsContainer.appendChild(tabCoeffs);
+                detailContainer.appendChild(tabsContainer);
                 
-                btnAppliquerCoeffs.addEventListener("click", () => {
-                    // Collecter tous les coefficients modifiés
-                    const coefficientsModifies = {};
-                    const inputs = detailTable.querySelectorAll('input[type="number"]');
-                    inputs.forEach(input => {
-                        const matiere = input.dataset.matiere;
-                        const coefficient = parseFloat(input.value);
-                        if (!isNaN(coefficient) && matiere) {
-                            coefficientsModifies[matiere] = coefficient;
-                        }
+                // Contenu pour les onglets
+                const detailContent = document.createElement("div");
+                detailContent.id = "detail-content";
+                detailContent.style.display = "block";
+                
+                const coeffsContent = document.createElement("div");
+                coeffsContent.id = "coeffs-content";
+                coeffsContent.style.display = "none";
+                
+                // Fonction pour changer d'onglet
+                function switchTab(tab) {
+                    // Réinitialiser tous les onglets
+                    document.querySelectorAll(".tab-button").forEach(t => {
+                        t.classList.remove("active");
+                        t.style.backgroundColor = "#f0f0f0";
                     });
                     
-                    // Sauvegarder les coefficients personnalisés
-                    try {
-                        localStorage.setItem('calmoyenne_coefficients_personnalises', JSON.stringify(coefficientsModifies));
-                        console.log("Coefficients personnalisés enregistrés :", coefficientsModifies);
-                    } catch (e) {
-                        console.error("Erreur lors de l'enregistrement des coefficients personnalisés:", e);
+                    // Cacher tous les contenus
+                    detailContent.style.display = "none";
+                    coeffsContent.style.display = "none";
+                    
+                    // Activer l'onglet sélectionné
+                    if (tab === "detail") {
+                        tabDetail.classList.add("active");
+                        tabDetail.style.backgroundColor = "#007bff";
+                        detailContent.style.display = "block";
+                    } else if (tab === "coeffs") {
+                        tabCoeffs.classList.add("active");
+                        tabCoeffs.style.backgroundColor = "#007bff";
+                        coeffsContent.style.display = "block";
                     }
-                    
-                    // Fermer la popup et relancer l'analyse
-                    detailContainer.style.display = "none";
-                    
-                    // Forcer une réanalyse
-                    dernierTableauHash = "";
-                    contenuPrecedent = "";
-                    analyseTerminee = false;
-                    
-                    // Afficher un message de confirmation
-                    afficherMessageFlottant("Coefficients personnalisés appliqués");
-                    
-                    setTimeout(() => {
-                        if (typeof window.lancerAnalyse === 'function') {
-                            window.lancerAnalyse();
-                        }
-                    }, 100);
-                });
+                }
                 
-                // Ajouter un bouton pour réinitialiser les coefficients personnalisés
-                const btnReinitialiserCoeffs = document.createElement("button");
-                btnReinitialiserCoeffs.textContent = "Réinitialiser les coefficients";
-                btnReinitialiserCoeffs.style.marginTop = "15px";
-                btnReinitialiserCoeffs.style.marginRight = "10px";
-                btnReinitialiserCoeffs.style.padding = "8px 16px";
-                btnReinitialiserCoeffs.style.backgroundColor = "#f5222d";
-                btnReinitialiserCoeffs.style.color = "white";
-                btnReinitialiserCoeffs.style.border = "none";
-                btnReinitialiserCoeffs.style.borderRadius = "4px";
-                btnReinitialiserCoeffs.style.cursor = "pointer";
+                // Ajouter les écouteurs d'événements pour les onglets
+                tabDetail.addEventListener("click", () => switchTab("detail"));
+                tabCoeffs.addEventListener("click", () => switchTab("coeffs"));
                 
-                btnReinitialiserCoeffs.addEventListener("click", () => {
-                    // Demande de confirmation
-                    if (confirm("Êtes-vous sûr de vouloir réinitialiser tous les coefficients personnalisés ?")) {
-                        // Supprimer les coefficients personnalisés
-                        try {
-                            localStorage.removeItem('calmoyenne_coefficients_personnalises');
-                            console.log("Coefficients personnalisés réinitialisés");
-                        } catch (e) {
-                            console.error("Erreur lors de la réinitialisation des coefficients personnalisés:", e);
-                        }
-                        
-                        // Fermer la popup et relancer l'analyse
-                        detailContainer.style.display = "none";
-                        
-                        // Forcer une réanalyse
-                        dernierTableauHash = "";
-                        contenuPrecedent = "";
-                        analyseTerminee = false;
-                        
-                        // Afficher un message de confirmation
-                        afficherMessageFlottant("Coefficients réinitialisés aux valeurs par défaut");
-                        
-                        setTimeout(() => {
-                            if (typeof window.lancerAnalyse === 'function') {
-                                window.lancerAnalyse();
-                            }
-                        }, 100);
-                    }
-                });
+                // Ajouter les contenus au container
+                detailContainer.appendChild(detailContent);
+                detailContainer.appendChild(coeffsContent);
                 
-                // Ajouter les boutons avant le bouton de fermeture
-                detailContainer.insertBefore(btnAppliquerCoeffs, closeBtn);
-                detailContainer.insertBefore(btnReinitialiserCoeffs, closeBtn);
-                detailContainer.insertBefore(document.createElement("br"), closeBtn);
-                
+                // Ajouter l'interface au document
                 document.body.appendChild(detailContainer);
                 
                 // Événement pour afficher le détail
@@ -1742,6 +1768,52 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                 }
                 afficherMessageFlottant(messageTooltip);
                 
+                // Contenu de l'onglet coefficients
+                coeffsContent.innerHTML = `
+                    <div style="margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 10px 0;">Gestion des coefficients</h4>
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: block; margin-bottom: 5px;">Classe:</label>
+                            <select id="classe-select-tab" style="width: 100%; padding: 5px; margin-bottom: 10px;">
+                                <option value="">-- Sélectionner une classe --</option>
+                                <option value="6EME">6ème</option>
+                                <option value="5EME">5ème</option>
+                                <option value="4EME">4ème</option>
+                                <option value="3EME">3ème</option>
+                                <option value="2NDE">2nde</option>
+                                <option value="1ERE">1ère</option>
+                                <option value="TERM">Terminale</option>
+                            </select>
+                        </div>
+                        <div id="coeffs-list" style="margin-top: 15px;"></div>
+                    </div>
+                `;
+                
+                // Ajouter l'écouteur pour le sélecteur de classe
+                const classeSelectTab = coeffsContent.querySelector("#classe-select-tab");
+                classeSelectTab.addEventListener("change", function() {
+                    const classe = this.value;
+                    if (classe) {
+                        // Sauvegarder la classe dans le stockage local
+                        localStorage.setItem("calmoyenne_classe", classe);
+                        // Recalculer la moyenne avec la nouvelle classe
+                        calculerEtAfficherMoyenne(tableau);
+                        // Mettre à jour l'affichage des coefficients
+                        afficherCoefficients(classe, coeffsContent.querySelector("#coeffs-list"));
+                    }
+                });
+                
+                // Essayer de récupérer la classe préalablement sélectionnée
+                try {
+                    const classeStockee = localStorage.getItem("calmoyenne_classe");
+                    if (classeStockee) {
+                        classeSelectTab.value = classeStockee;
+                        // Afficher les coefficients pour cette classe
+                        afficherCoefficients(classeStockee, coeffsContent.querySelector("#coeffs-list"));
+                    }
+                } catch (e) {
+                    console.error("Erreur lors de la récupération de la classe stockée:", e);
+                }
             } else {
                 console.log("Impossible de calculer la moyenne: pas assez de matières valides");
                 afficherMessageFlottant("Impossible de calculer la moyenne: aucune matière valide trouvée.");
@@ -1872,178 +1944,390 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
     
     // Fonction pour normaliser les formats de classe
     function normaliserClasse(classe) {
-        if (!classe) return "";
+        if (!classe) return null;
         
-        // Convertir en minuscules et supprimer les espaces
-        const classeLower = classe.toLowerCase().trim();
+        // Convertir en minuscules et supprimer les accents
+        let classeNormalisee = classe.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         
-        // Mapper les différentes représentations vers un format standard
-        if (/^6/.test(classeLower) || classeLower.includes("sixieme") || classeLower.includes("sixième")) {
-            return "6";
-        } else if (/^5/.test(classeLower) || classeLower.includes("cinquieme") || classeLower.includes("cinquième")) {
-            return "5";
-        } else if (/^4/.test(classeLower) || classeLower.includes("quatrieme") || classeLower.includes("quatrième")) {
-            return "4";
-        } else if (/^3/.test(classeLower) || classeLower.includes("troisieme") || classeLower.includes("troisième")) {
-            return "3";
-        } else if (/^2c/i.test(classeLower) || classeLower.includes("seconde c")) {
-            return "2C";
-        } else if (/^2/.test(classeLower) || classeLower.includes("seconde")) {
-            return "2";
-        } else if (/^1c/i.test(classeLower) || classeLower.includes("premiere c") || classeLower.includes("première c")) {
-            return "1C";
-        } else if (/^1d/i.test(classeLower) || classeLower.includes("premiere d") || classeLower.includes("première d")) {
-            return "1D";
-        } else if (/^1/.test(classeLower) || classeLower.includes("premiere") || classeLower.includes("première")) {
-            return "1";
-        } else if (/^tc/i.test(classeLower) || classeLower.includes("terminale c")) {
-            return "TC";
-        } else if (/^td/i.test(classeLower) || classeLower.includes("terminale d")) {
-            return "TD";
-        } else if (/^t/.test(classeLower) || classeLower.includes("terminale")) {
-            return "T";
+        // Supprimer les espaces et caractères spéciaux
+        classeNormalisee = classeNormalisee.replace(/[\s-_.]/g, "");
+        
+        // Mapper les différentes variantes
+        const mappingClasses = {
+            // Collège
+            "6": "6eme", "6e": "6eme", "6ème": "6eme", "6eme": "6eme", "sixieme": "6eme", "sixième": "6eme",
+            "5": "5eme", "5e": "5eme", "5ème": "5eme", "5eme": "5eme", "cinquieme": "5eme", "cinquième": "5eme",
+            "4": "4eme", "4e": "4eme", "4ème": "4eme", "4eme": "4eme", "quatrieme": "4eme", "quatrième": "4eme",
+            "3": "3eme", "3e": "3eme", "3ème": "3eme", "3eme": "3eme", "troisieme": "3eme", "troisième": "3eme",
+            
+            // Lycée
+            "2": "2nde", "2e": "2nde", "2nd": "2nde", "2nde": "2nde", "seconde": "2nde", 
+            "1": "1ere", "1e": "1ere", "1er": "1ere", "1ere": "1ere", "1ère": "1ere", "premiere": "1ere", "première": "1ere",
+            "t": "terminale", "tle": "terminale", "term": "terminale", "terminale": "terminale", "tale": "terminale"
+        };
+        
+        // Extraire la classe de base (sans la section)
+        let classeBase = classeNormalisee;
+        // Rechercher les variantes connues
+        for (const [variante, normalisee] of Object.entries(mappingClasses)) {
+            if (classeNormalisee.startsWith(variante)) {
+                classeBase = normalisee;
+                break;
+            }
         }
         
-        // Si aucune correspondance, retourner vide
-        return "";
+        console.log(`Classe normalisée: "${classe}" -> "${classeBase}"`);
+        return classeBase;
     }
     
     // Fonction pour normaliser le nom d'une matière
     function normaliserNomMatiere(matiere) {
-        if (!matiere) return "";
+        if (!matiere) return null;
         
-        const matiereLower = matiere.toLowerCase().trim();
+        // Convertir en minuscules, supprimer les accents et les caractères spéciaux
+        let matiereNormalisee = matiere.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^\w\s]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
         
-        // Dictionnaire des normalisations de matières
-        const matchingKeywords = {
-            'français': 'Français',
-            'francais': 'Français',
-            'math': 'Maths',
-            'histoire': 'Histoire-Géo',
-            'geo': 'Histoire-Géo',
-            'anglais': 'Anglais',
-            'lv1': 'Anglais',
-            'espagnol': 'Espagnol',
-            'lv2': 'Espagnol',
-            'allemand': 'Allemand',
-            'italien': 'Italien',
-            'latin': 'LCA Latin',
-            'grec': 'LCA Grec',
-            'svt': 'SVT',
-            'sciences': 'SVT',
-            'physique': 'Physique-Chimie',
-            'chimie': 'Physique-Chimie',
-            'phys': 'Physique-Chimie',
-            'techno': 'Technologie',
-            'art': 'Arts Plastiques',
-            'plastique': 'Arts Plastiques',
-            'musique': 'Musique',
-            'enseignement moral et civique': 'Enseignement Moral et Civique',
-            'moral': 'Enseignement Moral et Civique',
-            'civique': 'Enseignement Moral et Civique',
-            'emc': 'Enseignement Moral et Civique',
-            'musical': 'Musique',
-            'eps': 'EPS',
-            'sport': 'EPS',
-            'philo': 'Philosophie',
-            'philosophie': 'Philosophie',
-            'ses': 'SES',
-            'eco': 'SES',
-            'nsi': 'NSI',
-            'info': 'NSI',
-            'snt': 'SNT',
-            'numerique': 'SNT',
-            'ens.sci': 'Enseignement Scientifique',
-            'hggsp': 'HGGSP',
-            'humanité': 'Humanités',
-            'llce': 'LLCE Anglais'
+        // Mapper les différentes variantes de noms de matières
+        const mappingMatieres = {
+            // Français et langues
+            "francais": "francais", "français": "francais", "lettres": "francais", "fr": "francais",
+            "anglais": "anglais", "ang": "anglais", "lv1": "anglais", "langue vivante 1": "anglais", "anglophone": "anglais",
+            "allemand": "allemand", "all": "allemand", "lve allemand": "allemand",
+            "espagnol": "espagnol", "esp": "espagnol", "lve espagnol": "espagnol",
+            "lv2": "lv2", "langue vivante 2": "lv2",
+            "latin": "latin", "grec": "grec", "langues anciennes": "latin",
+            
+            // Mathématiques et sciences
+            "math": "mathematiques", "maths": "mathematiques", "mathematiques": "mathematiques", "mathématiques": "mathematiques",
+            "physique": "physique-chimie", "chimie": "physique-chimie", "physique chimie": "physique-chimie", "pc": "physique-chimie",
+            "svt": "svt", "sciences naturelles": "svt", "biologie": "svt", "sciences de la vie et de la terre": "svt",
+            "technologie": "technologie", "techno": "technologie", "tech": "technologie",
+            "si": "si", "sciences de l'ingenieur": "si", "sciences de l'ingénieur": "si",
+            "nsi": "nsi", "numerique et sciences informatiques": "nsi", "numérique et sciences informatiques": "nsi",
+            
+            // Sciences humaines
+            "histoire": "histoire-geographie", "geo": "histoire-geographie", "géographie": "histoire-geographie", 
+            "histoire geo": "histoire-geographie", "histoire géo": "histoire-geographie", "hg": "histoire-geographie",
+            "emc": "emc", "education civique": "emc", "éducation civique": "emc", "morale et civique": "emc",
+            "ses": "ses", "sciences economiques": "ses", "sciences économiques": "ses", "sciences eco": "ses",
+            "philosophie": "philosophie", "philo": "philosophie", "phi": "philosophie",
+            
+            // Enseignements artistiques et sport
+            "eps": "eps", "sport": "eps", "education physique": "eps", "éducation physique": "eps",
+            "musique": "musique", "education musicale": "musique", "éducation musicale": "musique",
+            "arts": "arts plastiques", "art": "arts plastiques", "arts plastiques": "arts plastiques",
+            
+            // Spécialités lycée
+            "specialite maths": "mathematiques", "spé maths": "mathematiques", "maths spe": "mathematiques", 
+            "specialite ses": "ses", "spé ses": "ses",
+            "specialite physique": "physique-chimie", "spé physique": "physique-chimie", "spe pc": "physique-chimie",
+            "specialite svt": "svt", "spé svt": "svt",
+            "hlp": "hlp", "humanites": "hlp", "humanités": "hlp",
+            "llce": "llce", "langues litteratures cultures etrangeres": "llce", "langues littératures cultures étrangères": "llce",
+            "hggsp": "hggsp", "geopolitique": "hggsp", "géopolitique": "hggsp", "sciences politiques": "hggsp",
+            
+            // Options
+            "option math": "maths complementaires", "maths complementaires": "maths complementaires", "maths complémentaires": "maths complementaires",
+            "option maths expertes": "maths expertes", "maths expertes": "maths expertes",
+            "dgemc": "dgemc", "droit": "dgemc"
         };
         
-        // Vérifier d'abord si la matière correspond exactement à une des entrées
-        for (const [keyword, nomNormalise] of Object.entries(matchingKeywords)) {
-            if (matiereLower === keyword || matiereLower === nomNormalise.toLowerCase()) {
-                return nomNormalise;
+        // Rechercher une correspondance précise
+        if (mappingMatieres[matiereNormalisee]) {
+            return mappingMatieres[matiereNormalisee];
+        }
+        
+        // Rechercher une correspondance partielle
+        for (const [cle, valeur] of Object.entries(mappingMatieres)) {
+            if (matiereNormalisee.includes(cle)) {
+                return valeur;
             }
         }
         
-        // Ensuite, vérifier si la matière contient un des mots-clés
-        for (const [keyword, nomNormalise] of Object.entries(matchingKeywords)) {
-            if (matiereLower.includes(keyword)) {
-                return nomNormalise;
-            }
-        }
-        
-        // Si aucune correspondance, retourner la matière telle quelle
-        return matiere;
+        // Si aucune correspondance trouvée, retourner la matière normalisée
+        return matiereNormalisee;
     }
 
     // Fonction pour suggérer des coefficients adaptés à la matière et à la classe
     function suggererCoefficient(matiere, classe) {
+        // Normaliser les entrées pour la recherche
+        const matiereNormalisee = normaliserNomMatiere(matiere);
+        const classeNormalisee = normaliserClasse(classe);
+        
         // Vérifier d'abord s'il y a des coefficients personnalisés
         try {
-            console.log(`Recherche de coefficient personnalisé pour ${matiere}`);
+            console.log(`Recherche de coefficient personnalisé pour ${matiere} (${matiereNormalisee})`);
             const coefficientsPersonnalises = JSON.parse(localStorage.getItem('calmoyenne_coefficients_personnalises') || '{}');
             console.log('Coefficients personnalisés trouvés:', coefficientsPersonnalises);
             
-            // Recherche exacte
+            // 1. Recherche exacte avec le nom original
             if (coefficientsPersonnalises[matiere]) {
                 console.log(`Coefficient personnalisé trouvé pour ${matiere}: ${coefficientsPersonnalises[matiere]}`);
                 return {
-                    valeur: coefficientsPersonnalises[matiere],
-                    source: "personnalisé"
+                    valeur: parseFloat(coefficientsPersonnalises[matiere]),
+                    source: "personnalisé (exact)"
                 };
             }
             
-            // Recherche insensible à la casse
-            const matiereNormalisee = matiere.toLowerCase().trim();
+            // 2. Recherche exacte avec le nom normalisé
+            if (matiereNormalisee && coefficientsPersonnalises[matiereNormalisee]) {
+                console.log(`Coefficient personnalisé trouvé pour ${matiereNormalisee}: ${coefficientsPersonnalises[matiereNormalisee]}`);
+                return {
+                    valeur: parseFloat(coefficientsPersonnalises[matiereNormalisee]),
+                    source: "personnalisé (normalisé)"
+                };
+            }
+            
+            // 3. Recherche insensible à la casse
+            const matiereMinuscule = matiere.toLowerCase().trim();
             for (const [key, value] of Object.entries(coefficientsPersonnalises)) {
-                if (key.toLowerCase().trim() === matiereNormalisee) {
+                if (key.toLowerCase().trim() === matiereMinuscule) {
                     console.log(`Coefficient personnalisé trouvé (insensible à la casse) pour ${matiere}: ${value}`);
                     return {
-                        valeur: value,
-                        source: "personnalisé"
+                        valeur: parseFloat(value),
+                        source: "personnalisé (insensible à la casse)"
                     };
                 }
             }
             
-            // Recherche partielle
+            // 4. Recherche partielle
             for (const [key, value] of Object.entries(coefficientsPersonnalises)) {
-                if (key.toLowerCase().includes(matiereNormalisee) || 
-                    matiereNormalisee.includes(key.toLowerCase())) {
+                // Vérifier si la clé ou la matière est un sous-ensemble de l'autre
+                if (key.toLowerCase().includes(matiereMinuscule) || 
+                    matiereMinuscule.includes(key.toLowerCase())) {
                     console.log(`Coefficient personnalisé trouvé (correspondance partielle) pour ${matiere}: ${value}`);
                     return {
-                        valeur: value,
-                        source: "personnalisé"
+                        valeur: parseFloat(value),
+                        source: "personnalisé (correspondance partielle)"
                     };
+                }
+            }
+            
+            // 5. Recherche avec le nom normalisé de façon partielle
+            if (matiereNormalisee) {
+                for (const [key, value] of Object.entries(coefficientsPersonnalises)) {
+                    if (key.toLowerCase().includes(matiereNormalisee.toLowerCase()) || 
+                        matiereNormalisee.toLowerCase().includes(key.toLowerCase())) {
+                        console.log(`Coefficient personnalisé trouvé (correspondance normalisée) pour ${matiere}: ${value}`);
+                        return {
+                            valeur: parseFloat(value),
+                            source: "personnalisé (correspondance normalisée)"
+                        };
+                    }
                 }
             }
         } catch(e) {
             console.error("Erreur lors de la récupération des coefficients personnalisés:", e);
         }
         
-        // Si pas de coefficient personnalisé, continuer avec la logique existante
-        if (!classe || !coefficientsParClasse[classe]) {
-            return null;
+        // Si pas de coefficient personnalisé, utiliser les coefficients par classe
+        if (!classeNormalisee) {
+            console.log(`Pas de classe identifiée pour ${matiere}, utilisant coefficient par défaut`);
+            return {
+                valeur: 1,
+                source: "défaut (pas de classe identifiée)"
+            };
         }
-
-        // Normaliser le nom de la matière pour la recherche
-        const matiereNormalisee = normaliserNomMatiere(matiere);
         
-        // Vérifier si un coefficient est spécifié dans la table pour cette matière et classe
-        const coefficients = coefficientsParClasse[classe];
-        for (const [cle, valeur] of Object.entries(coefficients)) {
-            if (cle.toLowerCase() === matiereNormalisee.toLowerCase() ||
-                matiereNormalisee.toLowerCase().includes(cle.toLowerCase()) ||
-                cle.toLowerCase().includes(matiereNormalisee.toLowerCase())) {
-                console.log(`Coefficient ${valeur} trouvé pour ${matiere} (${cle}) en classe de ${classe}`);
+        // Créer l'objet de coefficients par classe s'il n'existe pas déjà
+        if (typeof coefficientsParClasse === 'undefined') {
+            // Définir les coefficients par classe
+            window.coefficientsParClasse = {
+                // Collège
+                "6eme": {
+                    "francais": 5, "français": 5, "lettres": 5,
+                    "mathematiques": 5, "mathématiques": 5, "maths": 5,
+                    "histoire": 3, "géographie": 3, "histoire-géographie": 3, "histoire-geographie": 3,
+                    "anglais": 3, "lv1": 3, "langue vivante 1": 3,
+                    "allemand": 2, "espagnol": 2, "lv2": 2, "langue vivante 2": 2,
+                    "physique": 2, "physique-chimie": 2, 
+                    "svt": 2, "sciences de la vie et de la terre": 2,
+                    "technologie": 2, "techno": 2,
+                    "eps": 2, "éducation physique et sportive": 2, "sport": 2,
+                    "arts plastiques": 1, "art plastique": 1,
+                    "education musicale": 1, "éducation musicale": 1, "musique": 1
+                },
+                "5eme": {
+                    "francais": 5, "français": 5, "lettres": 5,
+                    "mathematiques": 5, "mathématiques": 5, "maths": 5,
+                    "histoire": 3, "géographie": 3, "histoire-géographie": 3, "histoire-geographie": 3,
+                    "anglais": 3, "lv1": 3, "langue vivante 1": 3,
+                    "allemand": 2, "espagnol": 2, "lv2": 2, "langue vivante 2": 2,
+                    "physique": 2, "physique-chimie": 2, 
+                    "svt": 2, "sciences de la vie et de la terre": 2,
+                    "technologie": 2, "techno": 2,
+                    "eps": 2, "éducation physique et sportive": 2, "sport": 2,
+                    "arts plastiques": 1, "art plastique": 1,
+                    "education musicale": 1, "éducation musicale": 1, "musique": 1
+                },
+                "4eme": {
+                    "francais": 5, "français": 5, "lettres": 5,
+                    "mathematiques": 5, "mathématiques": 5, "maths": 5,
+                    "histoire": 3, "géographie": 3, "histoire-géographie": 3, "histoire-geographie": 3,
+                    "anglais": 3, "lv1": 3, "langue vivante 1": 3,
+                    "allemand": 3, "espagnol": 3, "lv2": 3, "langue vivante 2": 3,
+                    "physique": 3, "physique-chimie": 3, 
+                    "svt": 3, "sciences de la vie et de la terre": 3,
+                    "technologie": 2, "techno": 2,
+                    "eps": 2, "éducation physique et sportive": 2, "sport": 2,
+                    "arts plastiques": 1, "art plastique": 1,
+                    "education musicale": 1, "éducation musicale": 1, "musique": 1
+                },
+                "3eme": {
+                    "francais": 5, "français": 5, "lettres": 5,
+                    "mathematiques": 5, "mathématiques": 5, "maths": 5,
+                    "histoire": 3, "géographie": 3, "histoire-géographie": 3, "histoire-geographie": 3,
+                    "anglais": 3, "lv1": 3, "langue vivante 1": 3,
+                    "allemand": 3, "espagnol": 3, "lv2": 3, "langue vivante 2": 3,
+                    "physique": 3, "physique-chimie": 3, 
+                    "svt": 3, "sciences de la vie et de la terre": 3,
+                    "technologie": 2, "techno": 2,
+                    "eps": 2, "éducation physique et sportive": 2, "sport": 2,
+                    "arts plastiques": 1, "art plastique": 1,
+                    "education musicale": 1, "éducation musicale": 1, "musique": 1
+                },
+                // Lycée - Seconde
+                "2nde": {
+                    "francais": 4, "français": 4, "lettres": 4,
+                    "mathematiques": 4, "mathématiques": 4, "maths": 4,
+                    "histoire": 3, "géographie": 3, "histoire-géographie": 3, "histoire-geographie": 3,
+                    "anglais": 3, "lv1": 3, "langue vivante 1": 3,
+                    "allemand": 3, "espagnol": 3, "lv2": 3, "langue vivante 2": 3,
+                    "physique": 3, "physique-chimie": 3, 
+                    "svt": 3, "sciences de la vie et de la terre": 3,
+                    "sns": 2, "sciences numériques et sociales": 2,
+                    "ses": 2, "sciences économiques et sociales": 2,
+                    "eps": 2, "éducation physique et sportive": 2, "sport": 2
+                },
+                // Lycée - Première générale
+                "1ere": {
+                    "francais": 5, "français": 5, "lettres": 5,
+                    "enseignement scientifique": 2,
+                    "histoire": 3, "géographie": 3, "histoire-géographie": 3, "histoire-geographie": 3,
+                    "anglais": 3, "lv1": 3, "langue vivante 1": 3,
+                    "allemand": 3, "espagnol": 3, "lv2": 3, "langue vivante 2": 3,
+                    "eps": 2, "éducation physique et sportive": 2, "sport": 2,
+                    // Spécialités
+                    "mathematiques": 6, "mathématiques": 6, "maths": 6, "spé maths": 6, "spe maths": 6,
+                    "physique": 6, "physique-chimie": 6, "spé physique": 6, "spe physique": 6,
+                    "svt": 6, "sciences de la vie et de la terre": 6, "spé svt": 6, "spe svt": 6,
+                    "ses": 6, "sciences économiques et sociales": 6, "spé ses": 6, "spe ses": 6,
+                    "hlp": 6, "humanités littérature philosophie": 6, "spé hlp": 6, "spe hlp": 6,
+                    "llce": 6, "langues littératures cultures étrangères": 6, "spé llce": 6, "spe llce": 6,
+                    "hggsp": 6, "histoire-géographie géopolitique sciences politiques": 6, "spé hggsp": 6, "histoire-geographie geopolitique sciences politiques": 6, "spe hggsp": 6,
+                    "nsi": 6, "numérique sciences informatiques": 6, "spé nsi": 6, "numerique sciences informatiques": 6, "spe nsi": 6
+                },
+                // Lycée - Terminale générale
+                "terminale": {
+                    "philosophie": 4, "philo": 4,
+                    "enseignement scientifique": 2,
+                    "histoire": 3, "géographie": 3, "histoire-géographie": 3, "histoire-geographie": 3,
+                    "anglais": 3, "lv1": 3, "langue vivante 1": 3,
+                    "allemand": 3, "espagnol": 3, "lv2": 3, "langue vivante 2": 3,
+                    "eps": 2, "éducation physique et sportive": 2, "sport": 2,
+                    // Spécialités (coefficient plus élevé car seulement 2 en terminale)
+                    "mathematiques": 8, "mathématiques": 8, "maths": 8, "spé maths": 8, "spe maths": 8,
+                    "physique": 8, "physique-chimie": 8, "spé physique": 8, "spe physique": 8,
+                    "svt": 8, "sciences de la vie et de la terre": 8, "spé svt": 8, "spe svt": 8,
+                    "ses": 8, "sciences économiques et sociales": 8, "spé ses": 8, "spe ses": 8,
+                    "hlp": 8, "humanités littérature philosophie": 8, "spé hlp": 8, "spe hlp": 8,
+                    "llce": 8, "langues littératures cultures étrangères": 8, "spé llce": 8, "spe llce": 8,
+                    "hggsp": 8, "histoire-géographie géopolitique sciences politiques": 8, "spé hggsp": 8, "histoire-geographie geopolitique sciences politiques": 8, "spe hggsp": 8,
+                    "nsi": 8, "numérique sciences informatiques": 8, "spé nsi": 8, "numerique sciences informatiques": 8, "spe nsi": 8
+                },
+                // Options qui s'appliquent à tous les niveaux
+                "options": {
+                    "latin": 2, "grec": 2, "langues anciennes": 2,
+                    "lv3": 2, "langue vivante 3": 2,
+                    "maths complementaires": 2, "maths complémentaires": 2,
+                    "maths expertes": 2, "maths expertes": 2,
+                    "dgemc": 2, "droit et grands enjeux du monde contemporain": 2
+                }
+            };
+        }
+        
+        // Accéder aux coefficientsParClasse
+        const coeffParClasse = window.coefficientsParClasse || {};
+        
+        // Si on a une classe normalisée, chercher dans les coefficients par classe
+        if (classeNormalisee && coeffParClasse[classeNormalisee]) {
+            // Vérifier si la matière normalisée existe dans cette classe
+            if (matiereNormalisee && coeffParClasse[classeNormalisee][matiereNormalisee]) {
                 return {
-                    valeur: valeur,
-                    source: "classe " + classe
+                    valeur: coeffParClasse[classeNormalisee][matiereNormalisee],
+                    source: `classe ${classeNormalisee} (${matiereNormalisee})`
                 };
+            }
+            
+            // Vérifier avec le nom original
+            if (coeffParClasse[classeNormalisee][matiere]) {
+                return {
+                    valeur: coeffParClasse[classeNormalisee][matiere],
+                    source: `classe ${classeNormalisee} (correspondance exacte)`
+                };
+            }
+            
+            // Vérifier avec matière lowercase
+            const matiereMinuscule = matiere.toLowerCase();
+            for (const [cle, valeur] of Object.entries(coeffParClasse[classeNormalisee])) {
+                if (cle.toLowerCase() === matiereMinuscule) {
+                    return {
+                        valeur: valeur,
+                        source: `classe ${classeNormalisee} (insensible à la casse)`
+                    };
+                }
+            }
+            
+            // Recherche partielle dans la classe
+            for (const [cle, valeur] of Object.entries(coeffParClasse[classeNormalisee])) {
+                if (cle.toLowerCase().includes(matiereMinuscule) || 
+                    matiereMinuscule.includes(cle.toLowerCase())) {
+                    return {
+                        valeur: valeur,
+                        source: `classe ${classeNormalisee} (correspondance partielle)`
+                    };
+                }
             }
         }
         
-        return null;
+        // Si matière non trouvée dans la classe, vérifier dans les options
+        if (coeffParClasse["options"]) {
+            // Recherche exacte
+            if (matiereNormalisee && coeffParClasse["options"][matiereNormalisee]) {
+                return {
+                    valeur: coeffParClasse["options"][matiereNormalisee],
+                    source: "option (correspondance exacte)"
+                };
+            }
+            
+            // Recherches variées
+            const matiereMinuscule = matiere.toLowerCase();
+            for (const [cle, valeur] of Object.entries(coeffParClasse["options"])) {
+                if (cle.toLowerCase() === matiereMinuscule) {
+                    return {
+                        valeur: valeur,
+                        source: "option (insensible à la casse)"
+                    };
+                } else if (cle.toLowerCase().includes(matiereMinuscule) || 
+                          matiereMinuscule.includes(cle.toLowerCase())) {
+                    return {
+                        valeur: valeur,
+                        source: "option (correspondance partielle)"
+                    };
+                }
+            }
+        }
+        
+        // Si aucun coefficient trouvé, retourner la valeur par défaut
+        return {
+            valeur: 1,
+            source: "défaut (matière non reconnue)"
+        };
     }
 
     // Fonction pour afficher la classe actuelle et permettre son changement rapide
@@ -2223,6 +2507,206 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
     
     // Exposer également la fonction analyserTableau pour les tentatives d'analyse manuelle
     window.analyserTableau = analyserTableau;
-    
     console.log("Fonctions d'analyse exposées globalement: lancerAnalyse et analyserTableau disponibles");
+})();
+
+// Modèle des fonctions pour les coefficients et l'affichage
+(function() {
+    // Fonction pour afficher les coefficients 
+    window.afficherCoefficients = function(classe, container) {
+        if (!container) {
+            console.error("Container pour les coefficients non trouvé");
+            return;
+        }
+        
+        container.innerHTML = '';
+        
+        // Récupérer les coefficients pour cette classe
+        const coefficients = obtenirCoefficientsParClasse(classe);
+        
+        // Créer des éléments pour chaque matière et son coefficient
+        for (const [matiere, coeff] of Object.entries(coefficients)) {
+            const row = document.createElement('div');
+            row.style.cssText = `
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 5px;
+                padding: 5px;
+                border-bottom: 1px solid #eee;
+            `;
+            
+            const matiereSpan = document.createElement('span');
+            matiereSpan.textContent = matiere;
+            
+            const coeffInput = document.createElement('input');
+            coeffInput.type = 'number';
+            coeffInput.min = '0';
+            coeffInput.max = '10';
+            coeffInput.step = '0.5';
+            coeffInput.value = coeff;
+            coeffInput.style.width = '60px';
+            
+            coeffInput.addEventListener('change', function() {
+                // Mettre à jour le coefficient dans l'objet
+                coefficients[matiere] = parseFloat(this.value) || 0;
+                
+                // Sauvegarder les nouveaux coefficients
+                sauvegarderCoefficients(classe, coefficients);
+                
+                // Recalculer la moyenne
+                const tableauActuel = document.querySelector('table.table');
+                if (tableauActuel) {
+                    calculerEtAfficherMoyenne(tableauActuel);
+                }
+            });
+            
+            row.appendChild(matiereSpan);
+            row.appendChild(coeffInput);
+            container.appendChild(row);
+        }
+    };
+
+    // Fonction pour sauvegarder les coefficients
+    window.sauvegarderCoefficients = function(classe, coefficients) {
+        try {
+            // Récupérer tous les coefficients stockés
+            let tousCoefficients = {};
+            try {
+                tousCoefficients = JSON.parse(localStorage.getItem('calmoyenne_coefficients') || '{}');
+            } catch (e) {
+                console.error("Erreur lors de la récupération des coefficients:", e);
+            }
+            
+            // Mettre à jour les coefficients pour cette classe
+            tousCoefficients[classe] = coefficients;
+            
+            // Sauvegarder dans le stockage local
+            localStorage.setItem('calmoyenne_coefficients', JSON.stringify(tousCoefficients));
+            console.log(`Coefficients sauvegardés pour la classe ${classe}`);
+        } catch (e) {
+            console.error("Erreur lors de la sauvegarde des coefficients:", e);
+        }
+    };
+    
+    // Fonction pour obtenir les coefficients par classe
+    window.obtenirCoefficientsParClasse = function(classe) {
+        // Coefficients par défaut selon la classe
+        const coefficientsDefaut = {
+            // Collège
+            '6EME': {
+                'Français': 1,
+                'Mathématiques': 1,
+                'Histoire-Géographie': 1,
+                'Anglais': 1,
+                'SVT': 1,
+                'Technologie': 1,
+                'Arts plastiques': 0.5,
+                'Musique': 0.5,
+                'EPS': 1
+            },
+            '5EME': {
+                'Français': 1,
+                'Mathématiques': 1,
+                'Histoire-Géographie': 1,
+                'Anglais': 1,
+                'SVT': 1,
+                'Technologie': 1,
+                'Physique-Chimie': 1,
+                'Arts plastiques': 0.5,
+                'Musique': 0.5,
+                'EPS': 1,
+                'LV2': 1
+            },
+            '4EME': {
+                'Français': 1,
+                'Mathématiques': 1,
+                'Histoire-Géographie': 1,
+                'Anglais': 1,
+                'SVT': 1,
+                'Technologie': 1,
+                'Physique-Chimie': 1,
+                'Arts plastiques': 0.5,
+                'Musique': 0.5,
+                'EPS': 1,
+                'LV2': 1
+            },
+            '3EME': {
+                'Français': 1.5,
+                'Mathématiques': 1.5,
+                'Histoire-Géographie': 1.5,
+                'Anglais': 1,
+                'SVT': 1,
+                'Technologie': 1,
+                'Physique-Chimie': 1,
+                'Arts plastiques': 0.5,
+                'Musique': 0.5,
+                'EPS': 1,
+                'LV2': 1
+            },
+            // Lycée
+            '2NDE': {
+                'Français': 1.5,
+                'Mathématiques': 1.5,
+                'Histoire-Géographie': 1,
+                'Anglais': 1,
+                'LV2': 1,
+                'SES': 1,
+                'SVT': 1,
+                'Physique-Chimie': 1,
+                'EPS': 1
+            },
+            '1ERE': {
+                // Tronc commun
+                'Français': 2,
+                'Histoire-Géographie': 1.5,
+                'Anglais': 1.5,
+                'LV2': 1.5,
+                'Enseignement scientifique': 1,
+                'EPS': 1,
+                // Spécialités
+                'Mathématiques': 2,
+                'Physique-Chimie': 2,
+                'SVT': 2,
+                'SES': 2,
+                'HGGSP': 2,
+                'LLCE': 2,
+                'Humanités': 2,
+                'Arts': 2
+            },
+            'TERM': {
+                // Tronc commun
+                'Philosophie': 2,
+                'Histoire-Géographie': 1.5,
+                'Anglais': 1.5,
+                'LV2': 1.5,
+                'Enseignement scientifique': 1,
+                'EPS': 1,
+                // Spécialités
+                'Mathématiques': 2.5,
+                'Physique-Chimie': 2.5,
+                'SVT': 2.5,
+                'SES': 2.5,
+                'HGGSP': 2.5,
+                'LLCE': 2.5,
+                'Humanités': 2.5,
+                'Arts': 2.5,
+                // Options
+                'Maths complémentaires': 1.5,
+                'Maths expertes': 1.5,
+                'Droits et grands enjeux': 1
+            }
+        };
+        
+        // Essayer de récupérer les coefficients personnalisés pour cette classe
+        try {
+            const tousCoefficients = JSON.parse(localStorage.getItem('calmoyenne_coefficients') || '{}');
+            const coefficientsPersonnalises = tousCoefficients[classe] || {};
+            
+            // Combiner les coefficients par défaut avec les personnalisés
+            return { ...coefficientsDefaut[classe] || {}, ...coefficientsPersonnalises };
+        } catch (e) {
+            console.error("Erreur lors de la récupération des coefficients personnalisés:", e);
+            return coefficientsDefaut[classe] || {};
+        }
+    };
 })();
