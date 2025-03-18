@@ -490,7 +490,7 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
         return contenu;
     }
 
-    // Observer les changements de navigation
+    // Initialisation des variables globales
     const observateurURL = new MutationObserver((mutations) => {
         // Ne vérifier que si l'URL a changé
         if (window.location.href !== dernierURL) {
@@ -511,32 +511,31 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             try {
                 // Vérifier si la cible est un élément valide
                 if (mutation.target && mutation.target.nodeType === 1) {
-                    // Si c'est un tableau
-                    if (mutation.target.tagName === 'TABLE') return true;
-                    
-                    // Si contient un tableau
-                    if (mutation.target.querySelector && mutation.target.querySelector('table')) return true;
-                }
-                
-                // Vérifier les nœuds ajoutés pour détecter un tableau
-                if (mutation.addedNodes && mutation.addedNodes.length) {
-                    return Array.from(mutation.addedNodes).some(node => {
-                        if (node.nodeType !== 1) return false;
-                        if (node.tagName === 'TABLE') return true;
-                        return node.querySelector && !!node.querySelector('table');
-                    });
+                    return mutation.target.tagName === 'TABLE' ||
+                           mutation.target.querySelector('table') !== null;
                 }
             } catch (e) {
-                console.error("Erreur dans la détection de tableau:", e);
+                console.error("Erreur lors de la vérification de mutation:", e);
             }
             return false;
         });
         
         if (tableauAffecte) {
-            console.log("Modification potentielle de tableau détectée");
             verifierChangementTableau();
         }
     });
+    
+    // Observateur spécifique pour Firefox
+    const observateurNodesAjoutes = isFirefox ? new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === 1 && node.tagName === 'TABLE') {
+                    console.log("Nouveau tableau détecté par l'observateur Firefox");
+                    verifierChangementTableau();
+                }
+            });
+        });
+    }) : null;
     
     // Fonction centrale pour vérifier si le tableau a changé
     function verifierChangementTableau() {
@@ -902,11 +901,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             let sommeCoeffs = 0;
             let sommeProduits = 0;
             let nbMatieresValides = 0;
+            let possiblesIndexMoyenne = []; // Déclarer la variable ici
             const matieresDetectees = [];
             let classeEleve = detecterClasseEleve();
-            
-            // Initialiser possiblesIndexMoyenne comme un tableau vide
-            let possiblesIndexMoyenne = [];
             
             // Essayer de récupérer la classe dans le stockage local si elle existe
             try {
@@ -2519,24 +2516,82 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             return;
         }
         
-        container.innerHTML = '';
+        container.innerHTML = `
+            <div class="coeffs-container" style="padding: 15px;">
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #0056b3;">Coefficients pour la classe de ${classe}</h4>
+                    <p style="margin: 0; color: #666; font-size: 14px;">
+                        Modifiez les coefficients selon vos besoins. Les changements sont automatiquement sauvegardés.
+                    </p>
+                </div>
+                
+                <div id="coeffs-list" style="margin-bottom: 20px;"></div>
+                
+                <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+                    <div style="margin-bottom: 15px;">
+                        <h5 style="margin: 0 0 10px 0; color: #0056b3;">Ajouter une nouvelle matière</h5>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="nouvelle-matiere" placeholder="Nom de la matière" 
+                                   style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <input type="number" id="nouveau-coeff" placeholder="Coeff" min="0" max="10" step="0.5"
+                                   style="width: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <button id="btn-ajouter-matiere" 
+                                    style="padding: 8px 15px; background: #28a745; color: white; border: none; 
+                                           border-radius: 4px; cursor: pointer;">
+                                Ajouter
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button id="btn-reinitialiser" 
+                                style="padding: 8px 15px; background: #dc3545; color: white; border: none; 
+                                       border-radius: 4px; cursor: pointer; flex: 1;">
+                            Réinitialiser les coefficients
+                        </button>
+                        <button id="btn-sauvegarder" 
+                                style="padding: 8px 15px; background: #0056b3; color: white; border: none; 
+                                       border-radius: 4px; cursor: pointer; flex: 1;">
+                            Sauvegarder
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
         
-        // Récupérer les coefficients pour cette classe
+        const coeffsList = container.querySelector('#coeffs-list');
         const coefficients = obtenirCoefficientsParClasse(classe);
         
-        // Créer des éléments pour chaque matière et son coefficient
-        for (const [matiere, coeff] of Object.entries(coefficients)) {
+        // Trier les matières par ordre alphabétique
+        const matieresSorted = Object.entries(coefficients).sort((a, b) => a[0].localeCompare(b[0]));
+        
+        // Créer les éléments pour chaque matière
+        matieresSorted.forEach(([matiere, coeff]) => {
             const row = document.createElement('div');
             row.style.cssText = `
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 5px;
-                padding: 5px;
-                border-bottom: 1px solid #eee;
+                align-items: center;
+                margin-bottom: 10px;
+                padding: 8px;
+                background: #f8f9fa;
+                border-radius: 4px;
             `;
             
-            const matiereSpan = document.createElement('span');
-            matiereSpan.textContent = matiere;
+            const matiereDiv = document.createElement('div');
+            matiereDiv.style.cssText = `
+                flex: 1;
+                margin-right: 15px;
+                display: flex;
+                align-items: center;
+            `;
+            
+            const matiereLabel = document.createElement('span');
+            matiereLabel.textContent = matiere;
+            matiereLabel.style.cssText = `
+                flex: 1;
+                font-weight: 500;
+            `;
             
             const coeffInput = document.createElement('input');
             coeffInput.type = 'number';
@@ -2544,15 +2599,33 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             coeffInput.max = '10';
             coeffInput.step = '0.5';
             coeffInput.value = coeff;
-            coeffInput.style.width = '60px';
+            coeffInput.style.cssText = `
+                width: 80px;
+                padding: 8px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                text-align: center;
+            `;
             
+            const btnSupprimer = document.createElement('button');
+            btnSupprimer.innerHTML = '&times;';
+            btnSupprimer.style.cssText = `
+                margin-left: 10px;
+                padding: 4px 8px;
+                background: #dc3545;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 16px;
+                line-height: 1;
+            `;
+            
+            // Événements
             coeffInput.addEventListener('change', function() {
-                // Mettre à jour le coefficient dans l'objet
-                coefficients[matiere] = parseFloat(this.value) || 0;
-                
-                // Sauvegarder les nouveaux coefficients
+                const nouvelleValeur = parseFloat(this.value) || 0;
+                coefficients[matiere] = nouvelleValeur;
                 sauvegarderCoefficients(classe, coefficients);
-                
                 // Recalculer la moyenne
                 const tableauActuel = document.querySelector('table.table');
                 if (tableauActuel) {
@@ -2560,10 +2633,87 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                 }
             });
             
-            row.appendChild(matiereSpan);
+            btnSupprimer.addEventListener('click', function() {
+                if (confirm(`Êtes-vous sûr de vouloir supprimer la matière "${matiere}" ?`)) {
+                    delete coefficients[matiere];
+                    sauvegarderCoefficients(classe, coefficients);
+                    row.remove();
+                    // Recalculer la moyenne
+                    const tableauActuel = document.querySelector('table.table');
+                    if (tableauActuel) {
+                        calculerEtAfficherMoyenne(tableauActuel);
+                    }
+                }
+            });
+            
+            matiereDiv.appendChild(matiereLabel);
+            row.appendChild(matiereDiv);
             row.appendChild(coeffInput);
-            container.appendChild(row);
-        }
+            row.appendChild(btnSupprimer);
+            coeffsList.appendChild(row);
+        });
+        
+        // Gestionnaires d'événements pour les boutons
+        const btnAjouter = container.querySelector('#btn-ajouter-matiere');
+        const inputMatiere = container.querySelector('#nouvelle-matiere');
+        const inputCoeff = container.querySelector('#nouveau-coeff');
+        
+        btnAjouter.addEventListener('click', function() {
+            const nouvelleMatiere = inputMatiere.value.trim();
+            const nouveauCoeff = parseFloat(inputCoeff.value) || 0;
+            
+            if (nouvelleMatiere && nouveauCoeff >= 0) {
+                if (coefficients[nouvelleMatiere]) {
+                    alert(`La matière "${nouvelleMatiere}" existe déjà.`);
+                    return;
+                }
+                
+                coefficients[nouvelleMatiere] = nouveauCoeff;
+                sauvegarderCoefficients(classe, coefficients);
+                
+                // Rafraîchir l'affichage
+                afficherCoefficients(classe, container);
+                
+                // Recalculer la moyenne
+                const tableauActuel = document.querySelector('table.table');
+                if (tableauActuel) {
+                    calculerEtAfficherMoyenne(tableauActuel);
+                }
+            } else {
+                alert("Veuillez entrer un nom de matière et un coefficient valide.");
+            }
+        });
+        
+        const btnReinitialiser = container.querySelector('#btn-reinitialiser');
+        btnReinitialiser.addEventListener('click', function() {
+            if (confirm("Êtes-vous sûr de vouloir réinitialiser tous les coefficients aux valeurs par défaut ?")) {
+                // Supprimer les coefficients personnalisés
+                const tousCoefficients = JSON.parse(localStorage.getItem('calmoyenne_coefficients') || '{}');
+                delete tousCoefficients[classe];
+                localStorage.setItem('calmoyenne_coefficients', JSON.stringify(tousCoefficients));
+                
+                // Rafraîchir l'affichage
+                afficherCoefficients(classe, container);
+                
+                // Recalculer la moyenne
+                const tableauActuel = document.querySelector('table.table');
+                if (tableauActuel) {
+                    calculerEtAfficherMoyenne(tableauActuel);
+                }
+            }
+        });
+        
+        const btnSauvegarder = container.querySelector('#btn-sauvegarder');
+        btnSauvegarder.addEventListener('click', function() {
+            sauvegarderCoefficients(classe, coefficients);
+            alert("Les coefficients ont été sauvegardés avec succès !");
+            
+            // Recalculer la moyenne
+            const tableauActuel = document.querySelector('table.table');
+            if (tableauActuel) {
+                calculerEtAfficherMoyenne(tableauActuel);
+            }
+        });
     };
 
     // Fonction pour sauvegarder les coefficients

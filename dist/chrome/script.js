@@ -595,7 +595,7 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             console.log("Observateurs DOM configurés avec succès");
             
             // Configuration spécifique pour Firefox
-            if (isFirefox) {
+                if (isFirefox) {
                 // Observer les modifications du DOM avec le nouveau MutationObserver
                 observateurNodesAjoutes.observe(document.body, {
                     childList: true,
@@ -1009,7 +1009,7 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                             moyenne = moyenne * 2;
                             console.log(`Moyenne trouvée sur 10 et convertie en /20: ${moyenne}`);
                         } else {
-                            console.log(`Moyenne trouvée dans la colonne identifiée (${indexMoyenne}): ${moyenne}`);
+                        console.log(`Moyenne trouvée dans la colonne identifiée (${indexMoyenne}): ${moyenne}`);
                         }
                     }
                 }
@@ -1031,9 +1031,9 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                                     moyenne = moyenne * 2;
                                     console.log(`Moyenne trouvée sur 10 et convertie en /20: ${moyenne}`);
                                 } else {
-                                    console.log(`Moyenne trouvée dans la cellule d'index ${idx}: ${moyenne}`);
+                            console.log(`Moyenne trouvée dans la cellule d'index ${idx}: ${moyenne}`);
                                 }
-                                break;
+                            break;
                             }
                         }
                     }
@@ -1124,7 +1124,7 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                                         }
                                         
                                         if (moyenne >= 0 && moyenne <= 20) {
-                                            break;
+                                    break;
                                         } else {
                                             moyenne = null;
                                         }
@@ -1158,7 +1158,7 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
                             }
                             
                             if (moyenne >= 0 && moyenne <= 20) {
-                                break;
+                                        break;
                             } else {
                                 moyenne = null;
                             }
@@ -2276,8 +2276,8 @@ console.log("Type de navigateur : " + (typeof browser !== 'undefined' ? "Firefox
             const matiereMinuscule = matiere.toLowerCase();
             for (const [cle, valeur] of Object.entries(coeffParClasse[classeNormalisee])) {
                 if (cle.toLowerCase() === matiereMinuscule) {
-                    return {
-                        valeur: valeur,
+                return {
+                    valeur: valeur,
                         source: `classe ${classeNormalisee} (insensible à la casse)`
                     };
                 }

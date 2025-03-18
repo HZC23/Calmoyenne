@@ -1,0 +1,21 @@
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Dossiers node
+node_modules/
+npm-debug.log
+
+# Fichiers de build
+*.xpi
+web-ext-artifacts/
+
+# Fichiers d'environnement
+.env
+.env.local
+
+# Fichiers d'éditeur
+.vscode/
+.idea/
+*.swp
+*.swo 
